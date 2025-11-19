@@ -6,7 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import logo from '@/assets/peoples-plaza-logo.jpg';
+import icon from '@/assets/peoples-plaza-icon.png';
+import cobblestone from '@/assets/cobblestone.png';
 
 const Auth = () => {
   const { login, signup } = useAuth();
@@ -46,10 +47,20 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden p-4">
+      {/* Cobblestone Background */}
+      <div 
+        className="absolute inset-0 opacity-[0.03] pointer-events-none"
+        style={{
+          backgroundImage: `url(${cobblestone})`,
+          backgroundSize: '400px 400px',
+          backgroundRepeat: 'repeat',
+        }}
+      />
+
+      <div className="w-full max-w-md relative z-10">
         <div className="flex justify-center mb-8">
-          <img src={logo} alt="People's Plaza" className="h-20 w-auto" />
+          <img src={icon} alt="People's Plaza" className="h-20 w-auto drop-shadow-lg" />
         </div>
         
         <Tabs defaultValue="login" className="w-full">
