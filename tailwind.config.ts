@@ -14,11 +14,13 @@ export default {
     },
     extend: {
       colors: {
-        teal: "hsl(var(--teal))",
-        olive: "hsl(var(--olive))",
-        charcoal: "hsl(var(--charcoal))",
-        gray: "hsl(var(--gray))",
-        taupe: "hsl(var(--taupe))",
+        "teal-primary": "hsl(var(--teal-primary))",
+        "teal-light": "hsl(var(--teal-light))",
+        "teal-dark": "hsl(var(--teal-dark))",
+        navy: "hsl(var(--navy))",
+        slate: "hsl(var(--slate))",
+        steel: "hsl(var(--steel))",
+        cloud: "hsl(var(--cloud))",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
