@@ -3,26 +3,20 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Send, Bot, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-}
+import { useChatHistory, Message } from '@/hooks/useChatHistory';
 
 export const ChatBox = () => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      role: 'assistant',
-      content: "Hi! I'm Penny, your civic assistant. I can help you find events, community resources, and answer questions about your city. What would you like to know?",
-      timestamp: new Date()
-    }
-  ]);
+  const { currentMessages, addMessage, currentConversationId, startNewConversation } = useChatHistory();
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Start a new conversation if none exists
+  useEffect(() => {
+    if (!currentConversationId) {
+      startNewConversation();
+    }
+  }, [currentConversationId, startNewConversation]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -30,7 +24,7 @@ export const ChatBox = () => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [currentMessages]);
 
   const generateResponse = (userMessage: string): string => {
     const lowerMessage = userMessage.toLowerCase();
@@ -60,7 +54,8 @@ export const ChatBox = () => {
       timestamp: new Date()
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    addMessage(userMessage);
+    const userInput = input;
     setInput('');
     setIsTyping(true);
 
@@ -69,10 +64,10 @@ export const ChatBox = () => {
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: generateResponse(input),
+        content: generateResponse(userInput),
         timestamp: new Date()
       };
-      setMessages(prev => [...prev, aiResponse]);
+      addMessage(aiResponse);
       setIsTyping(false);
     }, 1000);
   };
@@ -88,7 +83,7 @@ export const ChatBox = () => {
     <div className="flex flex-col h-[500px]">
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto space-y-4 p-4 bg-muted/20 rounded-lg mb-4">
-        {messages.map((message) => (
+        {currentMessages.map((message) => (
           <div
             key={message.id}
             className={cn(

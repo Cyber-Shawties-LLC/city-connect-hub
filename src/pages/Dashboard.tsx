@@ -1,10 +1,12 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LogOut, Cloud, Newspaper, AlertCircle, MessageSquare } from 'lucide-react';
+import { LogOut, Cloud, Newspaper, AlertCircle, MessageSquare, History } from 'lucide-react';
 import icon from '@/assets/peoples-plaza-icon.png';
 import cobblestone from '@/assets/cobblestone.png';
 import { ChatBox } from '@/components/ChatBox';
+import { ChatHistory } from '@/components/ChatHistory';
+import { ChatHistoryProvider } from '@/hooks/useChatHistory';
 import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
@@ -20,7 +22,8 @@ const Dashboard = () => {
   });
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
+    <ChatHistoryProvider>
+      <div className="min-h-screen bg-background relative overflow-hidden">
       {/* Cobblestone Background */}
       <div 
         className="absolute inset-0 opacity-[0.03] pointer-events-none"
@@ -119,21 +122,40 @@ const Dashboard = () => {
             </Card>
           </div>
 
-          {/* Chat with Penny */}
-          <Card className="border-primary/20 shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <MessageSquare className="h-5 w-5 text-primary" />
-                <span>Chat with Penny</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ChatBox />
-            </CardContent>
-          </Card>
+          {/* Chat Section with History */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Chat History Sidebar */}
+            <Card className="border-border shadow-lg lg:col-span-1">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <History className="h-5 w-5 text-primary" />
+                  <span>Chat History</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="h-[500px]">
+                  <ChatHistory />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Chat with Penny */}
+            <Card className="border-primary/20 shadow-lg lg:col-span-3">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <MessageSquare className="h-5 w-5 text-primary" />
+                  <span>Chat with Penny</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ChatBox />
+              </CardContent>
+            </Card>
+          </div>
         </main>
       </div>
     </div>
+    </ChatHistoryProvider>
   );
 };
 
