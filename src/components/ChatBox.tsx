@@ -5,7 +5,15 @@ import { Send, Bot, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useChatHistory, Message } from '@/hooks/useChatHistory';
 
-export const ChatBox = () => {
+// ⭐ ADD: Penny props
+interface ChatBoxProps {
+  messages: any[];
+  loading: boolean;
+  sendMessage: (msg: string) => Promise<void>;
+}
+
+// ⭐ ADD props to component definition
+export const ChatBox = ({ messages: pennyMessages, loading, sendMessage }: ChatBoxProps) => {
   const { currentMessages, addMessage, currentConversationId, startNewConversation } = useChatHistory();
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -24,8 +32,10 @@ export const ChatBox = () => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [currentMessages]);
+  }, [currentMessages, pennyMessages]);
 
+  // ⭐ REMOVE NOTHING — keep your original function,
+  // but we no longer use this for Penny responses.
   const generateResponse = (userMessage: string): string => {
     const lowerMessage = userMessage.toLowerCase();
     
@@ -44,6 +54,7 @@ export const ChatBox = () => {
     }
   };
 
+  // ⭐ UPDATED: send user message to Penny instead of fake responses
   const handleSend = async () => {
     if (!input.trim()) return;
 
@@ -54,22 +65,16 @@ export const ChatBox = () => {
       timestamp: new Date()
     };
 
-    addMessage(userMessage);
+    addMessage(userMessage);     // Save in history
     const userInput = input;
     setInput('');
     setIsTyping(true);
 
-    // Simulate AI response delay
-    setTimeout(() => {
-      const aiResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: generateResponse(userInput),
-        timestamp: new Date()
-      };
-      addMessage(aiResponse);
-      setIsTyping(false);
-    }, 1000);
+    // ⭐ CALL PENNY instead of generateResponse
+    await sendMessage(userInput);
+
+    // typing indicator tied to real loading flag
+    setIsTyping(false);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -79,11 +84,22 @@ export const ChatBox = () => {
     }
   };
 
+  // ⭐ DISPLAY Penny messages instead of simulated messages
+  const mergedMessages = [
+    ...currentMessages,
+    ...pennyMessages.map((msg, idx) => ({
+      id: "penny-" + idx,
+      role: msg.sender === "user" ? "user" : "assistant",
+      content: msg.text,
+      timestamp: new Date()
+    }))
+  ];
+
   return (
     <div className="flex flex-col h-[500px]">
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto space-y-4 p-4 bg-muted/20 rounded-lg mb-4">
-        {currentMessages.map((message) => (
+        {mergedMessages.map((message) => (
           <div
             key={message.id}
             className={cn(
@@ -116,7 +132,9 @@ export const ChatBox = () => {
             </div>
           </div>
         ))}
-        {isTyping && (
+
+        {/* Typing indicator */}
+        {(isTyping || loading) && (
           <div className="flex items-start space-x-3">
             <div className="flex-shrink-0 w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
               <Bot className="h-4 w-4 text-secondary-foreground" />
@@ -130,6 +148,7 @@ export const ChatBox = () => {
             </div>
           </div>
         )}
+
         <div ref={messagesEndRef} />
       </div>
 
