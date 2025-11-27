@@ -89,10 +89,24 @@ export const PennyChatProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const sendMessage = async (input: string, extra?: Partial<PennyPayload>) => {
-    if (!currentConversationId) {
-      startNewConversation();
-      // Wait a tick for the state to update
-      await new Promise(resolve => setTimeout(resolve, 0));
+    // Get or create conversation ID
+    let conversationId = currentConversationId;
+    if (!conversationId) {
+      conversationId = Date.now().toString();
+      const newConv: PennyConversation = {
+        id: conversationId,
+        title: 'New Conversation',
+        messages: [{
+          id: '1',
+          sender: 'penny',
+          text: "Hi! I'm Penny, your civic assistant. I can help you find events, community resources, and answer questions about your city. What would you like to know?",
+          timestamp: new Date()
+        }],
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      setConversations(prev => [newConv, ...prev]);
+      setCurrentConversationId(conversationId);
     }
 
     const userMessage: PennyMessage = {
@@ -104,7 +118,7 @@ export const PennyChatProvider = ({ children }: { children: ReactNode }) => {
 
     // Add user message to current conversation
     setConversations(prev => prev.map(conv => {
-      if (conv.id === currentConversationId) {
+      if (conv.id === conversationId) {
         const updatedMessages = [...conv.messages, userMessage];
         // Update title based on first user message
         let title = conv.title;
@@ -141,7 +155,7 @@ export const PennyChatProvider = ({ children }: { children: ReactNode }) => {
 
       // Add Penny's response to current conversation
       setConversations(prev => prev.map(conv => {
-        if (conv.id === currentConversationId) {
+        if (conv.id === conversationId) {
           return {
             ...conv,
             messages: [...conv.messages, pennyMessage],
@@ -159,7 +173,7 @@ export const PennyChatProvider = ({ children }: { children: ReactNode }) => {
       };
 
       setConversations(prev => prev.map(conv => {
-        if (conv.id === currentConversationId) {
+        if (conv.id === conversationId) {
           return {
             ...conv,
             messages: [...conv.messages, errorMessage],
