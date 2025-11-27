@@ -6,7 +6,7 @@ import icon from '@/assets/peoples-plaza-icon.png';
 import cobblestone from '@/assets/cobblestone.png';
 import { ChatBox } from '@/components/ChatBox';
 import { ChatHistory } from '@/components/ChatHistory';
-import { ChatHistoryProvider } from '@/hooks/useChatHistory';
+import { PennyChatProvider } from '@/hooks/usePennyChats';
 import { useNavigate } from 'react-router-dom';
 
 import { usePennyChat } from "../hooks/usePennyChats";
@@ -30,7 +30,7 @@ const Dashboard = () => {
   });
 
   return (
-    <ChatHistoryProvider>
+    <PennyChatProvider>
       <div className="min-h-screen bg-background relative overflow-hidden">
       {/* Cobblestone Background */}
       <div 
@@ -170,7 +170,7 @@ const Dashboard = () => {
         </main>
       </div>
     </div>
-    </ChatHistoryProvider>
+    </PennyChatProvider>
   );
 };
 
