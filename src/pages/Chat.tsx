@@ -2,7 +2,7 @@ import { useState, FormEvent } from "react";
 import { usePennyChat } from "../hooks/usePennyChats";
 
 export default function ChatPage() {
-  const { messages, loading, sendMessage } = usePennyChat();
+  const { currentMessages, loading, sendMessage } = usePennyChat();
   const [input, setInput] = useState("");
 
   async function handleSubmit(e: FormEvent) {
@@ -18,7 +18,7 @@ export default function ChatPage() {
       <h1>Penny Chatbot</h1>
 
       <div className="messages">
-        {messages.map((m, index) => (
+        {currentMessages.map((m, index) => (
           <div
             key={index}
             className={m.sender === "user" ? "user-message" : "bot-message"}

@@ -1,4 +1,4 @@
-import { useChatHistory } from '@/hooks/useChatHistory';
+import { usePennyChat } from '@/hooks/usePennyChats';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageSquare, Plus, Trash2 } from 'lucide-react';
@@ -11,7 +11,7 @@ export const ChatHistory = () => {
     startNewConversation, 
     loadConversation,
     deleteConversation 
-  } = useChatHistory();
+  } = usePennyChat();
 
   return (
     <div className="flex flex-col h-full">

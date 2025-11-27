@@ -6,14 +6,12 @@ import icon from '@/assets/peoples-plaza-icon.png';
 import cobblestone from '@/assets/cobblestone.png';
 import { ChatBox } from '@/components/ChatBox';
 import { ChatHistory } from '@/components/ChatHistory';
-import { ChatHistoryProvider } from '@/hooks/useChatHistory';
+import { PennyChatProvider } from '@/hooks/usePennyChats';
 import { useNavigate } from 'react-router-dom';
-import { usePennyChat } from '@/hooks/usePennyChats';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { messages, loading, sendMessage } = usePennyChat();
 
   const currentDate = new Date().toLocaleDateString('en-US', {
     weekday: 'short',
@@ -24,7 +22,7 @@ const Dashboard = () => {
   });
 
   return (
-    <ChatHistoryProvider>
+    <PennyChatProvider>
       <div className="min-h-screen bg-background relative overflow-hidden">
       {/* Cobblestone Background */}
       <div 
@@ -150,14 +148,14 @@ const Dashboard = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <ChatBox messages={messages} loading={loading} sendMessage={sendMessage} />
+                <ChatBox />
               </CardContent>
             </Card>
           </div>
         </main>
       </div>
     </div>
-    </ChatHistoryProvider>
+    </PennyChatProvider>
   );
 };
 
