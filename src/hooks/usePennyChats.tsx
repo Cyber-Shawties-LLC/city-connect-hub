@@ -36,20 +36,34 @@ export const PennyChatProvider = ({ children }: { children: ReactNode }) => {
 
   // Load conversations from localStorage on mount
   useEffect(() => {
-    const saved = localStorage.getItem('penny_chat_history');
-    if (saved) {
+    try {
+      const saved = localStorage.getItem('penny_chat_history');
+      if (!saved) return;
+
       const parsed = JSON.parse(saved);
-      // Convert date strings back to Date objects
+      if (!Array.isArray(parsed)) throw new Error('Invalid history format');
+
+      // Convert date strings back to Date objects, guard against bad data
       const withDates = parsed.map((conv: any) => ({
-        ...conv,
-        createdAt: new Date(conv.createdAt),
-        updatedAt: new Date(conv.updatedAt),
-        messages: conv.messages.map((msg: any) => ({
-          ...msg,
-          timestamp: new Date(msg.timestamp)
-        }))
+        id: String(conv.id ?? Date.now().toString()),
+        title: typeof conv.title === 'string' ? conv.title : 'Conversation',
+        createdAt: conv.createdAt ? new Date(conv.createdAt) : new Date(),
+        updatedAt: conv.updatedAt ? new Date(conv.updatedAt) : new Date(),
+        messages: Array.isArray(conv.messages)
+          ? conv.messages.map((msg: any, idx: number) => ({
+              id: String(msg.id ?? `${conv.id}-${idx}`),
+              sender: msg.sender === 'user' ? 'user' : 'penny',
+              text: String(msg.text ?? ''),
+              timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date(),
+            }))
+          : [],
       }));
+
       setConversations(withDates);
+    } catch (err) {
+      console.error('Failed to load penny_chat_history, clearing it:', err);
+      localStorage.removeItem('penny_chat_history');
+      setConversations([]);
     }
   }, []);
 
