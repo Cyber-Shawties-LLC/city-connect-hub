@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { talkToPenny, PennyPayload, PennyResponse } from "../lib/api";
 
 export interface PennyMessage {
@@ -74,7 +74,7 @@ export const PennyChatProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [conversations]);
 
-  const startNewConversation = () => {
+  const startNewConversation = useCallback(() => {
     const newConv: PennyConversation = {
       id: Date.now().toString(),
       title: 'New Conversation',
@@ -89,20 +89,20 @@ export const PennyChatProvider = ({ children }: { children: ReactNode }) => {
     };
     setConversations(prev => [newConv, ...prev]);
     setCurrentConversationId(newConv.id);
-  };
+  }, []);
 
-  const loadConversation = (id: string) => {
+  const loadConversation = useCallback((id: string) => {
     setCurrentConversationId(id);
-  };
+  }, []);
 
-  const deleteConversation = (id: string) => {
+  const deleteConversation = useCallback((id: string) => {
     setConversations(prev => prev.filter(conv => conv.id !== id));
     if (currentConversationId === id) {
       setCurrentConversationId(null);
     }
-  };
+  }, [currentConversationId]);
 
-  const sendMessage = async (input: string, extra?: Partial<PennyPayload>) => {
+  const sendMessage = useCallback(async (input: string, extra?: Partial<PennyPayload>) => {
     // Get or create conversation ID
     let conversationId = currentConversationId;
     if (!conversationId) {
@@ -199,7 +199,7 @@ export const PennyChatProvider = ({ children }: { children: ReactNode }) => {
     }
 
     setLoading(false);
-  };
+  }, [currentConversationId]);
 
   const currentMessages = conversations.find(c => c.id === currentConversationId)?.messages || [];
 
