@@ -9,9 +9,17 @@ import { ChatHistory } from '@/components/ChatHistory';
 import { ChatHistoryProvider } from '@/hooks/useChatHistory';
 import { useNavigate } from 'react-router-dom';
 
+import { usePennyChat } from "../hooks/usePennyChats";
+
+// ⭐ ADD THIS:
+import { useState } from "react";
+
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  const { messages, loading, sendMessage } = usePennyChat();
+  const [input, setInput] = useState("");
 
   const currentDate = new Date().toLocaleDateString('en-US', {
     weekday: 'short',
@@ -148,7 +156,14 @@ const Dashboard = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <ChatBox />
+                
+                {/* ⭐ CONNECT CHATBOX TO PENNY — ONLY ADD THIS */}
+                <ChatBox 
+                  messages={messages}
+                  loading={loading}
+                  sendMessage={sendMessage}
+                />
+
               </CardContent>
             </Card>
           </div>
@@ -160,3 +175,4 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+
