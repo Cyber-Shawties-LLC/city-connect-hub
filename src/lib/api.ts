@@ -32,41 +32,46 @@ export async function talkToPenny(
   payload: PennyPayload
 ): Promise<PennyResponse> {
   try {
-    // Gradio API - use /run endpoint (direct API call, simpler)
-    // Format: POST with array of parameters [message, city, history]
-    const res = await fetch(CHAT_ENDPOINT, {
+    // The error shows FastAPI expects a dictionary, but Gradio passes arrays
+    // We need to use /run/predict which is the Gradio API endpoint
+    // The backend error suggests the FastAPI endpoint is receiving the wrong format
+    // Let's use the Gradio /run/predict endpoint with proper queue handling
+    const sessionHash = payload.session_id || `session_${Date.now()}`;
+    const predictEndpoint = `${BACKEND_URL}/run/predict`;
+    
+    const res = await fetch(predictEndpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify([
-        payload.message,
-        payload.city || "Norfolk, VA",
-        payload.history || []
-      ]),
+      body: JSON.stringify({
+        fn_index: 1, // chat_with_penny_sync function index
+        data: [
+          payload.message,
+          payload.city || "Norfolk, VA",
+          payload.history || []
+        ],
+        session_hash: sessionHash,
+        event_data: null
+      }),
     });
 
     if (!res.ok) {
       const errorText = await res.text().catch(() => 'No error details');
-      
-      // If /run doesn't work, provide helpful error
-      if (res.status === 404) {
-        throw new Error(`Endpoint not found. The Gradio API endpoint might be different. Check the Space's API documentation.`);
-      }
-      
       throw new Error(`API Error: ${res.status} ${res.statusText} - ${errorText}`);
     }
 
     const result = await res.json();
     
-    // Gradio returns [chatbot_history, cleared_message]
+    // Gradio returns { data: [chatbot_history, cleared_message] }
     // chatbot_history is array of [user_msg, bot_msg] tuples
-    const history = Array.isArray(result) && result[0] ? result[0] : [];
+    const responseData = result.data || result;
+    const history = Array.isArray(responseData) && responseData[0] ? responseData[0] : [];
     const lastMessage = history.length > 0 ? history[history.length - 1] : null;
     const botReply = lastMessage?.[1] || "I'm sorry, I didn't get a response.";
     
     return {
-      data: result,
+      data: responseData,
       response: botReply,
       history: history
     };
