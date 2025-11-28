@@ -152,9 +152,30 @@ export const PennyChatProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
 
     try {
-      // Build payload matching Penny's FastAPI format
+      // Get current conversation messages for history (before adding the new user message)
+      const currentConv = conversations.find(c => c.id === conversationId);
+      const history: Array<[string | null, string | null]> = [];
+      
+      if (currentConv) {
+        // Build history from existing messages (excluding the welcome message)
+        const messages = currentConv.messages.filter(m => m.id !== '1');
+        for (let i = 0; i < messages.length; i += 2) {
+          const userMsg = messages[i];
+          const pennyMsg = messages[i + 1];
+          if (userMsg?.sender === 'user') {
+            history.push([
+              userMsg.text,
+              pennyMsg?.sender === 'penny' ? pennyMsg.text : null
+            ]);
+          }
+        }
+      }
+
+      // Build payload matching Penny's Gradio API format
       const payload: PennyPayload = {
-        message: input, // Use 'message' instead of 'input' for Penny API
+        message: input,
+        city: "Norfolk, VA", // Default city, can be made configurable
+        history: history,
         ...(extra || {}),
       };
       const result: PennyResponse = await talkToPenny(payload);
@@ -183,10 +204,28 @@ export const PennyChatProvider = ({ children }: { children: ReactNode }) => {
         return conv;
       }));
     } catch (error: any) {
+      console.error("Penny API error:", error);
+      
+      // Show more detailed error message to help debug
+      let errorText = "Sorry, I'm having trouble right now 💛. Please try again.";
+      if (error.message) {
+        if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
+          errorText = "Unable to connect to Penny. Please check if the backend is running and the URL is correct.";
+        } else if (error.message.includes("404")) {
+          errorText = "Penny endpoint not found. The backend might not be deployed or the endpoint path is incorrect.";
+        } else if (error.message.includes("CORS")) {
+          errorText = "CORS error: The backend needs to allow requests from this domain. Please check Penny's CORS settings.";
+        } else if (error.message.includes("500")) {
+          errorText = "Penny backend error. Please check the Hugging Face Space logs.";
+        } else {
+          errorText = `Error: ${error.message}`;
+        }
+      }
+      
       const errorMessage: PennyMessage = {
         id: (Date.now() + 1).toString(),
         sender: "penny",
-        text: "Sorry, I'm having trouble right now 💛",
+        text: errorText,
         timestamp: new Date()
       };
 
