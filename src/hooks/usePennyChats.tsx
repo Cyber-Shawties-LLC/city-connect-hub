@@ -152,7 +152,11 @@ export const PennyChatProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
 
     try {
-      const payload: PennyPayload = { input, ...(extra || {}) };
+      // Build payload matching Penny's FastAPI format
+      const payload: PennyPayload = {
+        message: input, // Use 'message' instead of 'input' for Penny API
+        ...(extra || {}),
+      };
       const result: PennyResponse = await talkToPenny(payload);
 
       const botReply =
