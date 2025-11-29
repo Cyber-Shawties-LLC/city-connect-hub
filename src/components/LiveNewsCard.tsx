@@ -35,18 +35,27 @@ export const LiveNewsCard = () => {
           
           setNewsItems(items);
         } else {
+          // If 404, function might not be deployed - use fallback silently
+          if (response.status === 404) {
+            console.warn('Live News API endpoint not found (404). Using fallback.');
+          }
           // Fallback to static items if API fails
+          const city = selectedMarket?.name || 'City';
           setNewsItems([
-            { title: "Community Board Meeting Tonight", time: "7:00 PM", source: "City Hall" },
-            { title: "New Park Opens Downtown", time: "Saturday", source: "City Events" }
+            { title: `${city} Community Meeting Tonight`, time: "7:00 PM", source: "City Hall" },
+            { title: `${city} Park Opens Downtown`, time: "Saturday", source: "City Events" }
           ]);
         }
-      } catch (error) {
-        console.error('Error fetching live news:', error);
+      } catch (error: any) {
+        // Don't log 404 errors as errors - they're expected if functions aren't deployed
+        if (!error.message?.includes('404')) {
+          console.error('Error fetching live news:', error);
+        }
         // Fallback to static items
+        const city = selectedMarket?.name || 'City';
         setNewsItems([
-          { title: "Community Board Meeting Tonight", time: "7:00 PM", source: "City Hall" },
-          { title: "New Park Opens Downtown", time: "Saturday", source: "City Events" }
+          { title: `${city} Community Meeting Tonight`, time: "7:00 PM", source: "City Hall" },
+          { title: `${city} Park Opens Downtown`, time: "Saturday", source: "City Events" }
         ]);
       } finally {
         setLoading(false);

@@ -46,12 +46,26 @@ export const EventsFeed = () => {
         setEvents(data.events || []);
         setLastUpdated(new Date());
       } else {
+        // If API returns 404, the function might not be deployed
+        if (response.status === 404) {
+          console.warn('Events API endpoint not found (404). Azure Function may not be deployed.');
+          setError('Events service is temporarily unavailable');
+          setEvents([]); // Set empty array instead of throwing
+          setLastUpdated(new Date());
+          return;
+        }
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || `API returned ${response.status}`);
       }
     } catch (err: any) {
       console.error('Error fetching events:', err);
-      setError(err.message || 'Failed to load events');
+      // Don't show error if it's just a 404 (function not deployed)
+      if (!err.message?.includes('404')) {
+        setError(err.message || 'Failed to load events');
+      } else {
+        setError(null); // Clear error for 404s
+        setEvents([]);
+      }
     } finally {
       setLoading(false);
     }

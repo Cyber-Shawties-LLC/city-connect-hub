@@ -38,9 +38,11 @@ export async function talkToPenny(
     
     // Try /api/predict first (Gradio 4.x+)
     let predictEndpoint = `${BACKEND_URL}/api/predict`;
-    let fnIndex = 0; // Start with 0, as it's often the first function
+    // Try fn_index 1 first (chat function is often the second function in Gradio apps)
+    let fnIndex = 1;
     
     // Prepare the data array - Gradio expects inputs in order
+    // Based on the error, make sure we're sending a proper array
     const dataArray = [
       payload.message || "",
       payload.city || "Norfolk, VA",
@@ -51,8 +53,7 @@ export async function talkToPenny(
       data: dataArray,
       event_data: null,
       fn_index: fnIndex,
-      session_hash: sessionHash,
-      trigger_id: Math.floor(Math.random() * 1000000000)
+      session_hash: sessionHash
     };
     
     console.log("Calling Penny API:", {
@@ -70,9 +71,24 @@ export async function talkToPenny(
     });
 
     // If /api/predict fails, try /run/predict (older Gradio versions)
-    if (!res.ok && res.status === 404) {
-      console.log("Trying /run/predict endpoint instead...");
+    if (!res.ok && (res.status === 404 || res.status === 500)) {
+      console.log("Trying /run/predict endpoint with fn_index 1...");
       predictEndpoint = `${BACKEND_URL}/run/predict`;
+      // Keep fn_index as 1 for chat function
+      requestBody.fn_index = 1;
+      res = await fetch(predictEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
+    }
+    
+    // If still failing, try fn_index 0
+    if (!res.ok && res.status === 500) {
+      console.log("Trying fn_index 0...");
+      requestBody.fn_index = 0;
       res = await fetch(predictEndpoint, {
         method: "POST",
         headers: {

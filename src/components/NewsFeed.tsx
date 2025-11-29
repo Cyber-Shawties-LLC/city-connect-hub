@@ -50,13 +50,27 @@ export const NewsFeed = () => {
           setArticles(Array.isArray(articlesData) ? articlesData : []);
           setLastUpdated(new Date());
         } else {
+          // If API returns 404, the function might not be deployed
+          if (response.status === 404) {
+            console.warn('News API endpoint not found (404). Azure Function may not be deployed.');
+            setError('News service is temporarily unavailable');
+            setArticles([]); // Set empty array instead of throwing
+            setLastUpdated(new Date());
+            return;
+          }
           // If API returns error, try to get error message
           const errorData = await response.json().catch(() => ({}));
           throw new Error(errorData.error || `API returned ${response.status}`);
         }
       } catch (err: any) {
         console.error('Error fetching news:', err);
-        setError(err.message || 'Failed to load news');
+        // Don't show error if it's just a 404 (function not deployed)
+        if (!err.message?.includes('404')) {
+          setError(err.message || 'Failed to load news');
+        } else {
+          setError(null); // Clear error for 404s
+          setArticles([]);
+        }
         
         // Fallback to mock data on error (so users still see something)
         const city = selectedMarket?.name || 'Norfolk';
