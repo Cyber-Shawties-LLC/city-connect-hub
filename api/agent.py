@@ -3,6 +3,7 @@ import requests
 import json
 import logging
 import urllib.parse
+from datetime import datetime
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -30,14 +31,19 @@ def main(req):
                 "body": json.dumps({"error": "Message is required"})
             }, 400
         
-        # Check if message is asking about weather
+        # Check if message is asking about weather or events
         weather_keywords = ["weather", "temperature", "temp", "forecast", "rain", "snow", "sunny", "cloudy", "how hot", "how cold", "what's the weather"]
+        event_keywords = ["event", "activities", "things to do", "what's happening", "recommendations", "suggest", "outdoor", "indoor"]
         message_lower = message.lower()
         is_weather_query = any(keyword in message_lower for keyword in weather_keywords)
+        is_event_query = any(keyword in message_lower for keyword in event_keywords)
         
-        # If weather query, fetch weather data and include it in the message
+        # Fetch weather data (for weather queries or event recommendations)
+        # Also fetch events if user is asking about events/activities
         weather_info = None
-        if is_weather_query:
+        events_info = None
+        
+        if is_weather_query or is_event_query:
             try:
                 # Parse city from "City, State" format
                 city_parts = city.split(",")
@@ -76,10 +82,71 @@ def main(req):
             # If we have weather info, enhance the message to Penny
             if weather_info and not weather_info.get("_is_mock"):
                 weather_text = f"Current weather in {city}: {weather_info.get('temperature')}°F, {weather_info.get('description')}. Feels like {weather_info.get('feels_like')}°F. Humidity: {weather_info.get('humidity')}%. Wind: {weather_info.get('wind_speed')} mph."
-                # Add weather context to the message
-                enhanced_message = f"{message}\n\n[Weather Context: {weather_text}]"
+                
+                # If event query, also fetch events for weather-based recommendations
+                if is_event_query:
+                    try:
+                        # Parse city from "City, State" format
+                        city_parts = city.split(",")
+                        city_name = city_parts[0].strip() if city_parts else "Norfolk"
+                        state_name = city_parts[1].strip() if len(city_parts) > 1 else ""
+                        
+                        # Get function app URL
+                        function_app_url = os.environ.get("WEBSITE_HOSTNAME", "")
+                        
+                        if function_app_url and function_app_url != "localhost":
+                            protocol = "https" if "azurewebsites.net" in function_app_url or "azurestaticapps.net" in function_app_url else "http"
+                            events_url = f"{protocol}://{function_app_url}/api/events?city={urllib.parse.quote(city_name)}&state={urllib.parse.quote(state_name)}&limit=5"
+                        else:
+                            events_url = f"http://localhost:7071/api/events?city={urllib.parse.quote(city_name)}&state={urllib.parse.quote(state_name)}&limit=5"
+                        
+                        logger.info(f"Fetching events from: {events_url}")
+                        events_response = requests.get(events_url, timeout=10)
+                        if events_response.ok:
+                            events_data = events_response.json()
+                            events_info = events_data.get("events", [])
+                            logger.info(f"Found {len(events_info)} events for recommendations")
+                    except Exception as e:
+                        logger.warning(f"Failed to fetch events: {str(e)}")
+                        events_info = None
+                
+                # Build context message
+                context_parts = [f"[Weather Context: {weather_text}]"]
+                
+                if events_info and len(events_info) > 0:
+                    # Suggest events based on weather
+                    temp = weather_info.get('temperature', 70)
+                    condition = weather_info.get('description', '').lower()
+                    
+                    # Weather-based event recommendations
+                    if temp >= 70 and ('sunny' in condition or 'clear' in condition):
+                        weather_note = "Perfect weather for outdoor events!"
+                    elif temp >= 60 and ('partly' in condition or 'clear' in condition):
+                        weather_note = "Nice weather for outdoor activities."
+                    elif temp < 50 or 'rain' in condition or 'snow' in condition:
+                        weather_note = "Consider indoor events due to weather."
+                    else:
+                        weather_note = "Check event details for indoor/outdoor status."
+                    
+                    # Format events list with dates
+                    events_list = []
+                    for e in events_info[:3]:
+                        event_date = e.get('date', '')
+                        try:
+                            if event_date:
+                                date_obj = datetime.fromisoformat(event_date.replace('Z', '+00:00'))
+                                date_str = date_obj.strftime('%b %d at %I:%M %p')
+                            else:
+                                date_str = "TBD"
+                        except:
+                            date_str = "TBD"
+                        events_list.append(f"- {e.get('title', 'Event')} on {date_str} at {e.get('location', 'TBD')}")
+                    
+                    context_parts.append(f"[Upcoming Events in {city}: {weather_note}\n" + "\n".join(events_list) + "]")
+                
+                enhanced_message = f"{message}\n\n" + "\n\n".join(context_parts)
                 message = enhanced_message
-                logger.info("Enhanced message with weather data")
+                logger.info("Enhanced message with weather and events data")
         
         # Get Hugging Face token from environment
         # Token should be set in Azure Static Web App → Configuration → Environment variables

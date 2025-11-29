@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 def main(req):
     """
     Azure Function for fetching weather data.
-    Uses Azure Maps Weather API (primary) with fallback to OpenWeatherMap/WeatherAPI.com.
+    Uses WeatherAPI.com (primary) with fallback to Azure Maps Weather API and OpenWeatherMap.
     """
     try:
         # Get query parameters - support both city/state and direct coordinates
@@ -19,21 +19,64 @@ def main(req):
         lat = req.params.get("lat")
         lon = req.params.get("lon")
         
-        # Get Azure Maps key (primary)
-        azure_maps_key = os.environ.get("AZURE_MAPS_KEY")
-        
-        # Fallback APIs (if Azure Maps not configured or fails)
-        # OpenWeatherMap - Free tier: 60 calls/minute, 1,000,000 calls/month
-        # Get API key from: https://openweathermap.org/api
-        openweather_api_key = os.environ.get("OPENWEATHER_API_KEY")
-        
+        # Get API keys - prioritize WeatherAPI.com if configured
         # WeatherAPI.com - Free tier: 1 million calls/month
         # Get API key from: https://www.weatherapi.com/
         weatherapi_key = os.environ.get("WEATHERAPI_KEY")
         
+        # Azure Maps key (fallback)
+        azure_maps_key = os.environ.get("AZURE_MAPS_KEY")
+        
+        # OpenWeatherMap (fallback)
+        openweather_api_key = os.environ.get("OPENWEATHER_API_KEY")
+        
         weather_data = None
         
-        # Try Azure Maps Weather API first (if key is configured)
+        # Priority 1: Try WeatherAPI.com first (if key is configured)
+        if weatherapi_key:
+            try:
+                # WeatherAPI.com - Simple and reliable
+                query = f"{city},{state}" if state else city
+                url = "https://api.weatherapi.com/v1/current.json"
+                params = {
+                    "key": weatherapi_key,
+                    "q": query,
+                    "aqi": "no"
+                }
+                
+                logger.info(f"Fetching weather from WeatherAPI.com for {query}")
+                response = requests.get(url, params=params, timeout=10)
+                response.raise_for_status()
+                data = response.json()
+                
+                # Convert WeatherAPI format to our format
+                weather_data = {
+                    "temperature": round(data["current"]["temp_f"]),
+                    "feels_like": round(data["current"]["feelslike_f"]),
+                    "description": data["current"]["condition"]["text"],
+                    "icon": data["current"]["condition"]["icon"],
+                    "humidity": data["current"]["humidity"],
+                    "wind_speed": round(data["current"]["wind_mph"]),
+                    "city": data["location"]["name"],
+                    "state": data["location"].get("region", state),
+                    "country": data["location"]["country"],
+                    "timestamp": datetime.now().isoformat()
+                }
+                
+                logger.info(f"Successfully fetched weather from WeatherAPI.com: {weather_data['temperature']}°F, {weather_data['description']}")
+                
+            except requests.exceptions.HTTPError as e:
+                error_text = e.response.text if hasattr(e, 'response') else str(e)
+                logger.error(f"WeatherAPI.com HTTP error: {e.response.status_code} - {error_text}")
+                weather_data = None
+            except requests.exceptions.RequestException as e:
+                logger.error(f"WeatherAPI.com request error: {str(e)}")
+                weather_data = None
+            except (KeyError, IndexError) as e:
+                logger.error(f"WeatherAPI.com data parsing error: {str(e)}")
+                weather_data = None
+        
+        # Priority 2: Try Azure Maps Weather API (if WeatherAPI.com failed or not configured)
         if azure_maps_key:
             logger.info(f"Azure Maps key found, attempting to fetch weather")
             try:
@@ -176,48 +219,21 @@ def main(req):
                 logger.warning(f"OpenWeatherMap error: {str(e)}, trying WeatherAPI")
                 weather_data = None
         
-        # Fallback to WeatherAPI.com if OpenWeatherMap failed or not configured
-        if not weather_data and weatherapi_key:
-            try:
-                # WeatherAPI.com
-                query = f"{city},{state}" if state else city
-                url = f"http://api.weatherapi.com/v1/current.json"
-                params = {
-                    "key": weatherapi_key,
-                    "q": query,
-                    "aqi": "no"
-                }
-                
-                logger.info(f"Fetching weather from WeatherAPI for {query}")
-                response = requests.get(url, params=params, timeout=10)
-                response.raise_for_status()
-                data = response.json()
-                
-                # Convert WeatherAPI format to our format
-                weather_data = {
-                    "temperature": round(data["current"]["temp_f"]),
-                    "feels_like": round(data["current"]["feelslike_f"]),
-                    "description": data["current"]["condition"]["text"],
-                    "icon": data["current"]["condition"]["icon"],
-                    "humidity": data["current"]["humidity"],
-                    "wind_speed": round(data["current"]["wind_mph"]),
-                    "city": data["location"]["name"],
-                    "state": data["location"].get("region", state),
-                    "country": data["location"]["country"],
-                    "timestamp": datetime.now().isoformat()
-                }
-                
-            except requests.exceptions.RequestException as e:
-                logger.warning(f"WeatherAPI error: {str(e)}")
-                weather_data = None
         
         # If no API keys or all failed, return mock data with error info
         if not weather_data:
             logger.error(f"CRITICAL: No weather data available for {city}, {state}. All APIs failed or not configured.")
+            logger.error(f"WeatherAPI Key present: {bool(weatherapi_key)}")
             logger.error(f"Azure Maps Key present: {bool(azure_maps_key)}")
             logger.error(f"OpenWeather Key present: {bool(openweather_api_key)}")
-            logger.error(f"WeatherAPI Key present: {bool(weatherapi_key)}")
             logger.error(f"Coordinates provided: lat={lat}, lon={lon}")
+            
+            # If WeatherAPI key is set but failed, provide specific guidance
+            if weatherapi_key:
+                logger.error("WeatherAPI.com key is configured but API call failed. Check:")
+                logger.error("  1. Key is correct (starts with your API key from weatherapi.com)")
+                logger.error("  2. Key has not expired")
+                logger.error("  3. API quota has not been exceeded")
             weather_data = get_mock_weather(city, state)
             # Add a flag to indicate this is mock data
             weather_data["_is_mock"] = True

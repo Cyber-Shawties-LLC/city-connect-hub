@@ -5,6 +5,10 @@
 const envUrl = (import.meta as any).env?.VITE_PENNY_BACKEND_URL;
 export const BACKEND_URL = envUrl || "https://CYBERSHAWTIES-PENNY-V2.hf.space";
 
+// Azure Static Web Apps API endpoint (for Python functions)
+// This will be proxied by Azure to the actual Azure Function
+export const API_URL = (import.meta as any).env?.VITE_API_URL || "/api";
+
 // Penny Gradio API endpoint - Hugging Face Space uses Gradio
 // Use /run/predict endpoint (Gradio's standard API endpoint)
 export const CHAT_ENDPOINT = `${BACKEND_URL}/run/predict`;
