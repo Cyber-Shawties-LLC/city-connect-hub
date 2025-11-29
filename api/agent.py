@@ -2,6 +2,7 @@ import os
 import requests
 import json
 import logging
+import urllib.parse
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -11,6 +12,7 @@ def main(req):
     """
     Azure Function to proxy requests to Penny Hugging Face Space.
     Handles Gradio API format conversion and queue management.
+    Also detects weather queries and fetches weather data.
     """
     try:
         # Get request body
@@ -27,6 +29,57 @@ def main(req):
                 "statusCode": 400,
                 "body": json.dumps({"error": "Message is required"})
             }, 400
+        
+        # Check if message is asking about weather
+        weather_keywords = ["weather", "temperature", "temp", "forecast", "rain", "snow", "sunny", "cloudy", "how hot", "how cold", "what's the weather"]
+        message_lower = message.lower()
+        is_weather_query = any(keyword in message_lower for keyword in weather_keywords)
+        
+        # If weather query, fetch weather data and include it in the message
+        weather_info = None
+        if is_weather_query:
+            try:
+                # Parse city from "City, State" format
+                city_parts = city.split(",")
+                city_name = city_parts[0].strip() if city_parts else "Norfolk"
+                state_name = city_parts[1].strip() if len(city_parts) > 1 else ""
+                
+                # For Azure Functions, call the weather function directly
+                # We'll import and call the weather function's logic
+                # Or make an HTTP request to the weather endpoint
+                
+                # In Azure Functions, we can call other functions using the function app URL
+                # Get the function app URL from environment
+                function_app_url = os.environ.get("WEBSITE_HOSTNAME", "")
+                
+                if function_app_url and function_app_url != "localhost":
+                    # Production - construct full URL to weather function
+                    protocol = "https" if "azurewebsites.net" in function_app_url or "azurestaticapps.net" in function_app_url else "http"
+                    weather_url = f"{protocol}://{function_app_url}/api/weather?city={urllib.parse.quote(city_name)}&state={urllib.parse.quote(state_name)}"
+                else:
+                    # Local development - Azure Functions Core Tools uses port 7071
+                    weather_url = f"http://localhost:7071/api/weather?city={urllib.parse.quote(city_name)}&state={urllib.parse.quote(state_name)}"
+                
+                logger.info(f"Fetching weather from: {weather_url}")
+                
+                # Make request to weather API
+                weather_response = requests.get(weather_url, timeout=10)
+                if weather_response.ok:
+                    weather_info = weather_response.json()
+                    logger.info(f"Weather data fetched: {weather_info.get('temperature')}°F for {city_name}")
+                else:
+                    logger.warning(f"Weather API returned {weather_response.status_code}: {weather_response.text[:200]}")
+            except Exception as e:
+                logger.warning(f"Failed to fetch weather data: {str(e)}")
+                weather_info = None
+            
+            # If we have weather info, enhance the message to Penny
+            if weather_info and not weather_info.get("_is_mock"):
+                weather_text = f"Current weather in {city}: {weather_info.get('temperature')}°F, {weather_info.get('description')}. Feels like {weather_info.get('feels_like')}°F. Humidity: {weather_info.get('humidity')}%. Wind: {weather_info.get('wind_speed')} mph."
+                # Add weather context to the message
+                enhanced_message = f"{message}\n\n[Weather Context: {weather_text}]"
+                message = enhanced_message
+                logger.info("Enhanced message with weather data")
         
         # Get Hugging Face token from environment
         # Token should be set in Azure Static Web App → Configuration → Environment variables

@@ -22,8 +22,13 @@ def main(req):
         # Get Azure Maps key (primary)
         azure_maps_key = os.environ.get("AZURE_MAPS_KEY")
         
-        # Fallback APIs (if Azure Maps not configured)
+        # Fallback APIs (if Azure Maps not configured or fails)
+        # OpenWeatherMap - Free tier: 60 calls/minute, 1,000,000 calls/month
+        # Get API key from: https://openweathermap.org/api
         openweather_api_key = os.environ.get("OPENWEATHER_API_KEY")
+        
+        # WeatherAPI.com - Free tier: 1 million calls/month
+        # Get API key from: https://www.weatherapi.com/
         weatherapi_key = os.environ.get("WEATHERAPI_KEY")
         
         weather_data = None
