@@ -73,31 +73,6 @@ export const LocationProvider = ({ children }: { children: ReactNode }) => {
   const [isDetecting, setIsDetecting] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
 
-  // Load saved location from localStorage on mount
-  useEffect(() => {
-    const saved = localStorage.getItem('selected_market');
-    if (saved) {
-      try {
-        const market = MARKET_AREAS.find(m => m.id === saved);
-        if (market) {
-          setSelectedMarketState(market);
-        }
-      } catch (e) {
-        console.error('Failed to load saved market:', e);
-      }
-    } else {
-      // Default to Norfolk if nothing is saved
-      setSelectedMarketState(MARKET_AREAS[0]);
-    }
-  }, []);
-
-  // Save to localStorage when selected market changes
-  useEffect(() => {
-    if (selectedMarket) {
-      localStorage.setItem('selected_market', selectedMarket.id);
-    }
-  }, [selectedMarket]);
-
   const detectLocation = useCallback(async () => {
     setIsDetecting(true);
     setLocationError(null);
@@ -139,6 +114,35 @@ export const LocationProvider = ({ children }: { children: ReactNode }) => {
       setIsDetecting(false);
     }
   }, []);
+
+  // Load saved location from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('selected_market');
+    if (saved) {
+      try {
+        const market = MARKET_AREAS.find(m => m.id === saved);
+        if (market) {
+          setSelectedMarketState(market);
+        }
+      } catch (e) {
+        console.error('Failed to load saved market:', e);
+      }
+    } else {
+      // Default to Norfolk if nothing is saved
+      setSelectedMarketState(MARKET_AREAS[0]);
+    }
+    
+    // Auto-detect location on mount to confirm/update market selection
+    detectLocation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
+
+  // Save to localStorage when selected market changes
+  useEffect(() => {
+    if (selectedMarket) {
+      localStorage.setItem('selected_market', selectedMarket.id);
+    }
+  }, [selectedMarket]);
 
   const setSelectedMarket = useCallback((market: MarketArea) => {
     setSelectedMarketState(market);

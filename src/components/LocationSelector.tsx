@@ -21,13 +21,8 @@ export const LocationSelector = () => {
     detectLocation,
   } = useLocation();
 
-  // Auto-detect location on mount (only once)
-  useEffect(() => {
-    // Only auto-detect if no market is selected yet
-    if (!selectedMarket) {
-      detectLocation();
-    }
-  }, []); // Empty dependency array - only run once on mount
+  // Note: Auto-detection is handled in LocationProvider on mount
+  // This component just displays the selector
 
   const handleMarketChange = (marketId: string) => {
     const market = MARKET_AREAS.find(m => m.id === marketId);

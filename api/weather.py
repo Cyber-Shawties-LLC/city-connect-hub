@@ -35,16 +35,29 @@ def main(req):
         # Priority 1: Try WeatherAPI.com first (if key is configured)
         if weatherapi_key:
             try:
-                # WeatherAPI.com - Simple and reliable
-                query = f"{city},{state}" if state else city
+                # WeatherAPI.com - Use coordinates if provided, otherwise use city/state
                 url = "https://api.weatherapi.com/v1/current.json"
                 params = {
                     "key": weatherapi_key,
-                    "q": query,
                     "aqi": "no"
                 }
                 
-                logger.info(f"Fetching weather from WeatherAPI.com for {query}")
+                # If coordinates are provided, use them (most accurate)
+                if lat and lon:
+                    try:
+                        lat_float = float(lat)
+                        lon_float = float(lon)
+                        params["q"] = f"{lat_float},{lon_float}"
+                        logger.info(f"Fetching weather from WeatherAPI.com using coordinates: {lat_float}, {lon_float}")
+                    except ValueError:
+                        logger.warning(f"Invalid coordinates provided: lat={lat}, lon={lon}, using city/state instead")
+                        params["q"] = f"{city},{state}" if state else city
+                        logger.info(f"Fetching weather from WeatherAPI.com for {params['q']}")
+                else:
+                    # Use city/state for geocoding
+                    params["q"] = f"{city},{state}" if state else city
+                    logger.info(f"Fetching weather from WeatherAPI.com for {params['q']}")
+                
                 response = requests.get(url, params=params, timeout=10)
                 response.raise_for_status()
                 data = response.json()
