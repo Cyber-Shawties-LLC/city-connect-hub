@@ -1,7 +1,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LogOut, Cloud, AlertCircle, MessageSquare, History } from 'lucide-react';
+import { LogOut, AlertCircle, MessageSquare, History } from 'lucide-react';
 import icon from '@/assets/peoples-plaza-icon.png';
 import cobblestone from '@/assets/cobblestone.png';
 import { ChatBox } from '@/components/ChatBox';
@@ -9,6 +9,7 @@ import { ChatHistory } from '@/components/ChatHistory';
 import { NewsFeed } from '@/components/NewsFeed';
 import { LiveNewsCard } from '@/components/LiveNewsCard';
 import { LocationSelector } from '@/components/LocationSelector';
+import { WeatherCard } from '@/components/WeatherCard';
 import { PennyChatProvider } from '@/hooks/usePennyChats';
 import { LocationProvider, useLocation } from '@/hooks/useLocation';
 import { useNavigate } from 'react-router-dom';
@@ -72,24 +73,8 @@ const DashboardContent = () => {
 
           {/* Dashboard Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {/* City Info */}
-            <Card className="hover:shadow-lg transition-shadow border-border">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Cloud className="h-5 w-5 text-primary" />
-                  <span>City & Weather</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <p className="text-2xl font-bold text-foreground">
-                    {selectedMarket?.displayName || 'Select Location'}
-                  </p>
-                  <p className="text-lg text-foreground">72°F, Partly Cloudy</p>
-                  <p className="text-sm text-muted-foreground">Perfect day for outdoor events</p>
-                </div>
-              </CardContent>
-            </Card>
+            {/* City Info & Weather */}
+            <WeatherCard />
 
             {/* Live News Card */}
             <LiveNewsCard />
