@@ -169,7 +169,8 @@ export const LocationSelector = () => {
           Current market: <span className="font-medium">{selectedMarket.displayName}</span>
         </p>
       )}
-    </div>
+      </div>
+    </>
   );
 };
 
