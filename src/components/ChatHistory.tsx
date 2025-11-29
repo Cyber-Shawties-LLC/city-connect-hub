@@ -1,8 +1,19 @@
 import { usePennyChat } from '@/hooks/usePennyChats';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MessageSquare, Plus, Trash2 } from 'lucide-react';
+import { MessageSquare, Plus, Trash2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 export const ChatHistory = () => {
   const { 
@@ -10,12 +21,13 @@ export const ChatHistory = () => {
     currentConversationId, 
     startNewConversation, 
     loadConversation,
-    deleteConversation 
+    deleteConversation,
+    clearAllConversations 
   } = usePennyChat();
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-4 border-b border-border">
+      <div className="p-4 border-b border-border space-y-2">
         <Button 
           onClick={startNewConversation} 
           className="w-full"
@@ -24,6 +36,37 @@ export const ChatHistory = () => {
           <Plus className="h-4 w-4 mr-2" />
           New Chat
         </Button>
+        {conversations.length > 0 && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button 
+                variant="outline" 
+                className="w-full"
+                size="sm"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Clear All
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Clear All Chat History?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete all your chat conversations. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={clearAllConversations}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Clear All
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </div>
       
       <ScrollArea className="flex-1">

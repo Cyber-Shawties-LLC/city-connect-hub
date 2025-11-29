@@ -26,6 +26,7 @@ interface PennyChatContextType {
   loadConversation: (id: string) => void;
   sendMessage: (input: string, extra?: Partial<PennyPayload>) => Promise<void>;
   deleteConversation: (id: string) => void;
+  clearAllConversations: () => void;
 }
 
 const PennyChatContext = createContext<PennyChatContextType | undefined>(undefined);
@@ -103,6 +104,12 @@ export const PennyChatProvider = ({ children }: { children: ReactNode }) => {
       setCurrentConversationId(null);
     }
   }, [currentConversationId]);
+
+  const clearAllConversations = useCallback(() => {
+    setConversations([]);
+    setCurrentConversationId(null);
+    localStorage.removeItem('penny_chat_history');
+  }, []);
 
   const sendMessage = useCallback(async (input: string, extra?: Partial<PennyPayload>) => {
     // Get or create conversation ID
@@ -257,7 +264,8 @@ export const PennyChatProvider = ({ children }: { children: ReactNode }) => {
       startNewConversation,
       loadConversation,
       sendMessage,
-      deleteConversation
+      deleteConversation,
+      clearAllConversations
     }}>
       {children}
     </PennyChatContext.Provider>

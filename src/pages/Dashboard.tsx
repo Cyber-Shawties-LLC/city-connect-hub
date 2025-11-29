@@ -10,7 +10,7 @@ import { NewsFeed } from '@/components/NewsFeed';
 import { LiveNewsCard } from '@/components/LiveNewsCard';
 import { LocationSelector } from '@/components/LocationSelector';
 import { WeatherCard } from '@/components/WeatherCard';
-import { EventsFeed } from '@/components/EventsFeed';
+// import { EventsFeed } from '@/components/EventsFeed'; // Commented out to match dashboard screenshot
 import { PennyChatProvider } from '@/hooks/usePennyChats';
 import { LocationProvider, useLocation } from '@/hooks/useLocation';
 import { useNavigate } from 'react-router-dom';
@@ -113,11 +113,6 @@ const DashboardContent = () => {
           {/* News Feed Section */}
           <div className="mb-8">
             <NewsFeed />
-          </div>
-
-          {/* Events Feed Section */}
-          <div className="mb-8">
-            <EventsFeed />
           </div>
 
           {/* Chat Section with History */}
