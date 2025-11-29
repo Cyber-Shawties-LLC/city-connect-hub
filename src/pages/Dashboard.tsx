@@ -1,12 +1,13 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LogOut, Cloud, Newspaper, AlertCircle, MessageSquare, History } from 'lucide-react';
+import { LogOut, Cloud, AlertCircle, MessageSquare, History } from 'lucide-react';
 import icon from '@/assets/peoples-plaza-icon.png';
 import cobblestone from '@/assets/cobblestone.png';
 import { ChatBox } from '@/components/ChatBox';
 import { ChatHistory } from '@/components/ChatHistory';
 import { NewsFeed } from '@/components/NewsFeed';
+import { LiveNewsCard } from '@/components/LiveNewsCard';
 import { PennyChatProvider } from '@/hooks/usePennyChats';
 import { useNavigate } from 'react-router-dom';
 
@@ -78,27 +79,8 @@ const Dashboard = () => {
               </CardContent>
             </Card>
 
-            {/* News */}
-            <Card className="hover:shadow-lg transition-shadow border-border">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Newspaper className="h-5 w-5 text-primary" />
-                  <span>Local News</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="border-l-2 border-primary pl-3">
-                    <p className="font-medium text-sm text-foreground">Community Board Meeting Tonight</p>
-                    <p className="text-xs text-muted-foreground">7:00 PM at City Hall</p>
-                  </div>
-                  <div className="border-l-2 border-primary/60 pl-3">
-                    <p className="font-medium text-sm text-foreground">New Park Opens Downtown</p>
-                    <p className="text-xs text-muted-foreground">Grand opening ceremony Saturday</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Live News Card */}
+            <LiveNewsCard />
 
             {/* Important Updates */}
             <Card className="hover:shadow-lg transition-shadow border-border">
