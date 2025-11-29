@@ -1,16 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, Bot, User, AlertCircle } from 'lucide-react';
+import { Send, Bot, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePennyChat } from '@/hooks/usePennyChats';
-import { GradioEmbed } from './GradioEmbed';
 
 export const ChatBox = () => {
   const { currentMessages, loading, sendMessage, currentConversationId, startNewConversation } = usePennyChat();
   const [input, setInput] = useState('');
-  const [useFallback, setUseFallback] = useState(false);
-  const [apiErrorCount, setApiErrorCount] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Start a new conversation if none exists
@@ -20,22 +17,8 @@ export const ChatBox = () => {
     }
   }, [currentConversationId, startNewConversation]);
 
-  // Monitor for API errors and switch to fallback after 2 failures
-  useEffect(() => {
-    const lastMessage = currentMessages[currentMessages.length - 1];
-    if (lastMessage && lastMessage.sender === 'penny' && 
-        (lastMessage.text.includes('endpoint not found') || 
-         lastMessage.text.includes('Unable to connect') ||
-         lastMessage.text.includes('API Error'))) {
-      setApiErrorCount(prev => {
-        const newCount = prev + 1;
-        if (newCount >= 2 && !useFallback) {
-          setUseFallback(true);
-        }
-        return newCount;
-      });
-    }
-  }, [currentMessages, useFallback]);
+  // Don't automatically switch to fallback - let user decide
+  // Removed automatic fallback to Gradio embed
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -60,37 +43,8 @@ export const ChatBox = () => {
     }
   };
 
-  // Show fallback if API fails multiple times
-  if (useFallback) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-          <div className="flex items-center space-x-2">
-            <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
-            <div>
-              <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                Using embedded chat interface
-              </p>
-              <p className="text-xs text-yellow-600 dark:text-yellow-400">
-                API connection unavailable. Using direct interface.
-              </p>
-            </div>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setUseFallback(false);
-              setApiErrorCount(0);
-            }}
-          >
-            Try API Again
-          </Button>
-        </div>
-        <GradioEmbed />
-      </div>
-    );
-  }
+  // Removed automatic fallback to Gradio embed
+  // Users can still access Penny directly if needed, but we won't force it
 
   return (
     <div className="flex flex-col h-[500px]">

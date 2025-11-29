@@ -36,15 +36,13 @@ export const LocationSelector = () => {
 
   // Show location prompt on first load if location hasn't been detected
   useEffect(() => {
-    // Check if we've already prompted or detected location
+    // Check if we've already detected location
     const hasDetectedLocation = localStorage.getItem('location_detected');
-    const hasPromptedBefore = localStorage.getItem('location_prompt_shown');
     
     // Show prompt if:
-    // 1. We haven't prompted before
-    // 2. We haven't detected location
-    // 3. User hasn't explicitly dismissed it
-    if (!hasPromptedBefore && !hasDetectedLocation && !hasPrompted) {
+    // 1. We haven't detected location (or it was denied)
+    // 2. We haven't shown the prompt yet in this session
+    if (!hasDetectedLocation && !hasPrompted) {
       // Small delay to let page load first
       const timer = setTimeout(() => {
         setShowLocationPrompt(true);
@@ -63,7 +61,6 @@ export const LocationSelector = () => {
 
   const handleDenyLocation = () => {
     setShowLocationPrompt(false);
-    localStorage.setItem('location_prompt_shown', 'true');
     localStorage.setItem('location_detected', 'denied');
   };
 
