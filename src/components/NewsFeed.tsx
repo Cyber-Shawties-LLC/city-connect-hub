@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, ExternalLink, Newspaper } from 'lucide-react';
@@ -26,103 +26,105 @@ export const NewsFeed = () => {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  useEffect(() => {
-    const fetchNews = async () => {
-      setLoading(true);
-      setError(null);
+  // Move fetchNews outside useEffect so it can be called from onClick
+  const fetchNews = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const city = selectedMarket?.name || 'Norfolk';
       
-      try {
-        const city = selectedMarket?.name || 'Norfolk';
-        
-        // Fetch from Azure Function API (uses NEWS_API_KEY from Azure environment)
-        const apiUrl = '/api/news';
-        const response = await fetch(`${apiUrl}?city=${city}&limit=10`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          // Handle both direct array and wrapped response
-          const articlesData = data.articles || data;
-          setArticles(Array.isArray(articlesData) ? articlesData : []);
-          setLastUpdated(new Date());
-        } else {
-          // If API returns 404, the function might not be deployed
-          if (response.status === 404) {
-            console.warn('News API endpoint not found (404). Azure Function may not be deployed.');
-            setError('News service is temporarily unavailable');
-            setArticles([]); // Set empty array instead of throwing
-            setLastUpdated(new Date());
-            return;
-          }
-          // If API returns error, try to get error message
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || `API returned ${response.status}`);
-        }
-      } catch (err: any) {
-        console.error('Error fetching news:', err);
-        // Don't show error if it's just a 404 (function not deployed)
-        if (!err.message?.includes('404')) {
-          setError(err.message || 'Failed to load news');
-        } else {
-          setError(null); // Clear error for 404s
-          setArticles([]);
-        }
-        
-        // Fallback to mock data on error (so users still see something)
-        const city = selectedMarket?.name || 'Norfolk';
-        const mockArticles: NewsArticle[] = [
-          {
-            title: "City Council Approves New Community Center Funding",
-            description: `The ${city} City Council voted unanimously to approve $2.5 million in funding for a new community center in the downtown area.`,
-            url: "#",
-            publishedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-            source: `${city} Daily News`
-          },
-          {
-            title: "Local Library Hosts Free Technology Workshops",
-            description: `The ${city} Public Library is offering free technology workshops for seniors every Tuesday and Thursday this month.`,
-            url: "#",
-            publishedAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-            source: "Community Bulletin"
-          },
-          {
-            title: "New Bike Lanes Installed on Main Street",
-            description: "The city has completed installation of protected bike lanes on Main Street, improving safety for cyclists and pedestrians.",
-            url: "#",
-            publishedAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
-            source: `${city} Transportation`
-          },
-          {
-            title: "Farmers Market Returns This Saturday",
-            description: "The weekly farmers market returns to the downtown plaza this Saturday with over 30 local vendors offering fresh produce and handmade goods.",
-            url: "#",
-            publishedAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
-            source: `${city} Events`
-          },
-          {
-            title: "City Announces New Recycling Program",
-            description: `Starting next month, ${city} will expand its recycling program to include more materials and offer curbside pickup for all residents.`,
-            url: "#",
-            publishedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-            source: `${city} Public Works`
-          }
-        ];
-        setArticles(mockArticles);
+      // Fetch from Azure Function API (uses NEWS_API_KEY from Azure environment)
+      const apiUrl = '/api/news';
+      const response = await fetch(`${apiUrl}?city=${city}&limit=10`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        // Handle both direct array and wrapped response
+        const articlesData = data.articles || data;
+        setArticles(Array.isArray(articlesData) ? articlesData : []);
         setLastUpdated(new Date());
-      } finally {
-        setLoading(false);
+      } else {
+        // If API returns 404, the function might not be deployed
+        if (response.status === 404) {
+          console.warn('News API endpoint not found (404). Azure Function may not be deployed.');
+          setError('News service is temporarily unavailable');
+          setArticles([]); // Set empty array instead of throwing
+          setLastUpdated(new Date());
+          return;
+        }
+        // If API returns error, try to get error message
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `API returned ${response.status}`);
       }
-    };
+    } catch (err: any) {
+      console.error('Error fetching news:', err);
+      // Don't show error if it's just a 404 (function not deployed)
+      if (!err.message?.includes('404')) {
+        setError(err.message || 'Failed to load news');
+      } else {
+        setError(null); // Clear error for 404s
+        setArticles([]);
+      }
+      
+      // Fallback to mock data on error (so users still see something)
+      const city = selectedMarket?.name || 'Norfolk';
+      const mockArticles: NewsArticle[] = [
+        {
+          title: "City Council Approves New Community Center Funding",
+          description: `The ${city} City Council voted unanimously to approve $2.5 million in funding for a new community center in the downtown area.`,
+          url: "#",
+          publishedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+          source: `${city} Daily News`
+        },
+        {
+          title: "Local Library Hosts Free Technology Workshops",
+          description: `The ${city} Public Library is offering free technology workshops for seniors every Tuesday and Thursday this month.`,
+          url: "#",
+          publishedAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+          source: "Community Bulletin"
+        },
+        {
+          title: "New Bike Lanes Installed on Main Street",
+          description: "The city has completed installation of protected bike lanes on Main Street, improving safety for cyclists and pedestrians.",
+          url: "#",
+          publishedAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
+          source: `${city} Transportation`
+        },
+        {
+          title: "Farmers Market Returns This Saturday",
+          description: "The weekly farmers market returns to the downtown plaza this Saturday with over 30 local vendors offering fresh produce and handmade goods.",
+          url: "#",
+          publishedAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
+          source: `${city} Events`
+        },
+        {
+          title: "City Announces New Recycling Program",
+          description: `Starting next month, ${city} will expand its recycling program to include more materials and offer curbside pickup for all residents.`,
+          url: "#",
+          publishedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+          source: `${city} Public Works`
+        }
+      ];
+      setArticles(mockArticles);
+      setLastUpdated(new Date());
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedMarket?.name]);
 
+  // Call fetchNews on mount and when location changes
+  useEffect(() => {
     fetchNews();
     // Auto-refresh every 30 minutes
     const interval = setInterval(fetchNews, 30 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [selectedMarket?.id, selectedMarket?.name]); // Refetch when location changes
+  }, [fetchNews]); // Depend on fetchNews callback
 
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
@@ -153,27 +155,7 @@ export const NewsFeed = () => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => {
-              const fetchNews = async () => {
-                setLoading(true);
-                setError(null);
-                const city = selectedMarket?.name || 'Norfolk';
-                try {
-                  const response = await fetch(`/api/news?city=${city}&limit=10`);
-                  if (response.ok) {
-                    const data = await response.json();
-                    const articlesData = data.articles || data;
-                    setArticles(Array.isArray(articlesData) ? articlesData : []);
-                    setLastUpdated(new Date());
-                  }
-                } catch (err: any) {
-                  setError(err.message || 'Failed to load news');
-                } finally {
-                  setLoading(false);
-                }
-              };
-              fetchNews();
-            }}
+            onClick={fetchNews}
             disabled={loading}
             className="h-8 w-8 p-0"
           >

@@ -14,11 +14,17 @@ import { EventsFeed } from '@/components/EventsFeed';
 import { PennyChatProvider } from '@/hooks/usePennyChats';
 import { LocationProvider, useLocation } from '@/hooks/useLocation';
 import { useNavigate } from 'react-router-dom';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const DashboardContent = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { selectedMarket } = useLocation();
+  const { selectedMarket } = useLocation(); // This is safe because DashboardContent is wrapped in LocationProvider
+
+  // Safety check - if user is null, redirect (shouldn't happen due to ProtectedRoute, but just in case)
+  if (!user) {
+    return null; // ProtectedRoute will handle redirect
+  }
 
   const currentDate = new Date().toLocaleDateString('en-US', {
     weekday: 'short',
@@ -29,8 +35,9 @@ const DashboardContent = () => {
   });
 
   return (
-    <PennyChatProvider>
-      <div className="min-h-screen bg-background relative overflow-hidden">
+    <ErrorBoundary>
+      <PennyChatProvider>
+        <div className="min-h-screen bg-background relative overflow-hidden">
       {/* Cobblestone Background */}
       <div 
         className="absolute inset-0 opacity-[0.03] pointer-events-none"
@@ -146,7 +153,8 @@ const DashboardContent = () => {
         </main>
       </div>
     </div>
-    </PennyChatProvider>
+      </PennyChatProvider>
+    </ErrorBoundary>
   );
 };
 
