@@ -12,12 +12,15 @@
 #    For instructions on setting up the appropriate configuration values go to https://docs.microsoft.com/azure/static-web-apps/front-end-frameworks
 name: Deploy web app to Azure Static Web Apps
 
+# DISABLED: Using azure-static-web-apps-blue-dune-00f22300f.yml instead
+# This workflow is kept for reference but disabled to prevent duplicate runs
 on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    types: [opened, synchronize, reopened, closed]
-    branches: [ "main" ]
+  workflow_dispatch: # Only manual trigger, not on push
+  # push:
+  #   branches: [ "main" ]
+  # pull_request:
+  #   types: [opened, synchronize, reopened, closed]
+  #   branches: [ "main" ]
 
 # Environment variables available to all jobs and steps in this workflow
 env:
