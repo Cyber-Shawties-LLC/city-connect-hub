@@ -13,9 +13,11 @@ def main(req):
     Uses Azure Maps Weather API (primary) with fallback to OpenWeatherMap/WeatherAPI.com.
     """
     try:
-        # Get query parameters
+        # Get query parameters - support both city/state and direct coordinates
         city = req.params.get("city") or "Norfolk"
         state = req.params.get("state") or ""
+        lat = req.params.get("lat")
+        lon = req.params.get("lon")
         
         # Get Azure Maps key (primary)
         azure_maps_key = os.environ.get("AZURE_MAPS_KEY")
@@ -28,39 +30,57 @@ def main(req):
         
         # Try Azure Maps Weather API first (if key is configured)
         if azure_maps_key:
-            logger.info(f"Azure Maps key found, attempting to fetch weather for {city}, {state}")
+            logger.info(f"Azure Maps key found, attempting to fetch weather")
             try:
-                # First, get coordinates for the city using Azure Maps Geocoding
-                geocode_url = "https://atlas.microsoft.com/search/address/json"
-                geocode_params = {
-                    "api-version": "1.0",
-                    "subscription-key": azure_maps_key,
-                    "query": f"{city}, {state}, US" if state else f"{city}, US"
-                }
+                # If coordinates are provided directly, use them (from user's geolocation)
+                if lat and lon:
+                    try:
+                        lat_float = float(lat)
+                        lon_float = float(lon)
+                        logger.info(f"Using provided coordinates: {lat_float}, {lon_float}")
+                        use_coords = True
+                    except ValueError:
+                        logger.warning(f"Invalid coordinates provided: {lat}, {lon}")
+                        use_coords = False
+                else:
+                    use_coords = False
                 
-                logger.info(f"Geocoding {city}, {state} with Azure Maps")
-                geocode_response = requests.get(geocode_url, params=geocode_params, timeout=10)
-                geocode_response.raise_for_status()
-                geocode_data = geocode_response.json()
-                
-                logger.info(f"Geocoding response: {json.dumps(geocode_data)[:200]}")
-                
-                if geocode_data.get("results") and len(geocode_data["results"]) > 0:
-                    position = geocode_data["results"][0]["position"]
-                    lat = position["lat"]
-                    lon = position["lon"]
+                # If no coordinates, geocode the city name to get coordinates
+                if not use_coords:
+                    logger.info(f"Geocoding {city}, {state} with Azure Maps")
+                    geocode_url = "https://atlas.microsoft.com/search/address/json"
+                    geocode_params = {
+                        "api-version": "1.0",
+                        "subscription-key": azure_maps_key,
+                        "query": f"{city}, {state}, US" if state else f"{city}, US"
+                    }
                     
-                    logger.info(f"Found coordinates: {lat}, {lon}")
+                    geocode_response = requests.get(geocode_url, params=geocode_params, timeout=10)
+                    geocode_response.raise_for_status()
+                    geocode_data = geocode_response.json()
                     
-                    # Now get current weather conditions using Azure Maps Weather API
+                    logger.info(f"Geocoding response: {json.dumps(geocode_data)[:200]}")
+                    
+                    if geocode_data.get("results") and len(geocode_data["results"]) > 0:
+                        position = geocode_data["results"][0]["position"]
+                        lat_float = position["lat"]
+                        lon_float = position["lon"]
+                        use_coords = True
+                        logger.info(f"Found coordinates from geocoding: {lat_float}, {lon_float}")
+                    else:
+                        logger.warning(f"Azure Maps Geocoding returned no results for {city}, {state}")
+                        use_coords = False
+                
+                # Get weather using coordinates
+                if use_coords:
                     weather_url = "https://atlas.microsoft.com/weather/currentConditions/json"
                     weather_params = {
                         "api-version": "1.1",
                         "subscription-key": azure_maps_key,
-                        "query": f"{lat},{lon}"
+                        "query": f"{lat_float},{lon_float}"
                     }
                     
-                    logger.info(f"Fetching weather from Azure Maps for coordinates {lat},{lon}")
+                    logger.info(f"Fetching weather from Azure Maps for coordinates {lat_float},{lon_float}")
                     weather_response = requests.get(weather_url, params=weather_params, timeout=10)
                     weather_response.raise_for_status()
                     weather_result = weather_response.json()
@@ -101,7 +121,6 @@ def main(req):
                         logger.warning("Azure Maps Weather API returned no results")
                         weather_data = None
                 else:
-                    logger.warning(f"Azure Maps Geocoding returned no results for {city}, {state}")
                     weather_data = None
                         
             except requests.exceptions.HTTPError as e:
