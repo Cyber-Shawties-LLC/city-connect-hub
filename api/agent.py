@@ -163,7 +163,9 @@ def main(req):
         logger.info(f"HF_TOKEN found: {HF_TOKEN[:10]}...{HF_TOKEN[-4:] if len(HF_TOKEN) > 14 else '***'}")
         
         # Penny Hugging Face Space URL
-        PENNY_SPACE_URL = os.environ.get("PENNY_SPACE_URL", "https://CYBERSHAWTIES-PENNY-V2.hf.space")
+        # Space: pythonprincess/Penny_V2.2
+        # URL: https://huggingface.co/spaces/pythonprincess/Penny_V2.2
+        PENNY_SPACE_URL = os.environ.get("PENNY_SPACE_URL", "https://pythonprincess-penny-v2-2.hf.space")
         predict_endpoint = f"{PENNY_SPACE_URL}/run/predict"
         
         # Prepare Gradio API request

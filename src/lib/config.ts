@@ -1,9 +1,10 @@
 // Backend URL - Penny AI deployed on Hugging Face Spaces
-// Space: CyberShawties/Penny_V2
+// Space: pythonprincess/Penny_V2.2
+// URL: https://huggingface.co/spaces/pythonprincess/Penny_V2.2
 // For production (Azure Static Web App), use the Hugging Face Space URL
 // For local development, you can override with environment variable
 const envUrl = (import.meta as any).env?.VITE_PENNY_BACKEND_URL;
-export const BACKEND_URL = envUrl || "https://CYBERSHAWTIES-PENNY-V2.hf.space";
+export const BACKEND_URL = envUrl || "https://pythonprincess-penny-v2-2.hf.space";
 
 // Azure Static Web Apps API endpoint (for Python functions)
 // This will be proxied by Azure to the actual Azure Function
