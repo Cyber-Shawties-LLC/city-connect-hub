@@ -6,6 +6,7 @@ import icon from '@/assets/peoples-plaza-icon.png';
 import cobblestone from '@/assets/cobblestone.png';
 import { ChatBox } from '@/components/ChatBox';
 import { ChatHistory } from '@/components/ChatHistory';
+import { NewsFeed } from '@/components/NewsFeed';
 import { PennyChatProvider } from '@/hooks/usePennyChats';
 import { useNavigate } from 'react-router-dom';
 
@@ -120,6 +121,11 @@ const Dashboard = () => {
                 </div>
               </CardContent>
             </Card>
+          </div>
+
+          {/* News Feed Section */}
+          <div className="mb-8">
+            <NewsFeed />
           </div>
 
           {/* Chat Section with History */}
