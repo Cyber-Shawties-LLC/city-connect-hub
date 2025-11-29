@@ -86,9 +86,9 @@ export const LocationProvider = ({ children }: { children: ReactNode }) => {
     try {
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0
+          enableHighAccuracy: false, // Changed to false - more reliable
+          timeout: 15000, // Increased timeout
+          maximumAge: 300000 // Allow cached position up to 5 minutes
         });
       });
 
@@ -104,12 +104,31 @@ export const LocationProvider = ({ children }: { children: ReactNode }) => {
       // Auto-select if a market is found
       if (nearest) {
         setSelectedMarketState(nearest);
+        setLocationError(null); // Clear any previous errors
       } else {
         setLocationError('You are not in a supported market area');
       }
     } catch (error: any) {
       console.error('Location detection error:', error);
-      setLocationError(error.message || 'Failed to detect location');
+      
+      // Provide user-friendly error messages based on error code
+      let errorMessage = 'Failed to detect location';
+      if (error.code === 1) {
+        errorMessage = 'Location permission denied. Please allow location access in your browser settings.';
+      } else if (error.code === 2) {
+        errorMessage = 'Location unavailable. Please try again or select your city manually.';
+      } else if (error.code === 3) {
+        errorMessage = 'Location request timed out. Please try again.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setLocationError(errorMessage);
+      // Don't clear detected location if we already have one
+      if (!detectedLocation) {
+        setDetectedLocation(null);
+        setDetectedMarket(null);
+      }
     } finally {
       setIsDetecting(false);
     }

@@ -3,6 +3,7 @@ import requests
 import json
 import logging
 import urllib.parse
+import time
 from datetime import datetime
 
 # Configure logging
@@ -166,7 +167,10 @@ def main(req):
         # Space: pythonprincess/Penny_V2.2
         # URL: https://huggingface.co/spaces/pythonprincess/Penny_V2.2
         PENNY_SPACE_URL = os.environ.get("PENNY_SPACE_URL", "https://pythonprincess-penny-v2-2.hf.space")
-        predict_endpoint = f"{PENNY_SPACE_URL}/run/predict"
+        
+        # Try /api/predict first (Gradio 4.x+ queue API)
+        # This endpoint handles the queue automatically
+        predict_endpoint = f"{PENNY_SPACE_URL}/api/predict"
         
         # Prepare Gradio API request
         # Gradio expects: { fn_index, data: [message, city, history], session_hash, event_data }
@@ -193,12 +197,117 @@ def main(req):
         logger.info(f"Payload: {json.dumps(gradio_payload, indent=2)}")
         
         # Make request to Gradio API
+        # Try /api/predict first (handles queue automatically in newer Gradio)
         response = requests.post(
             predict_endpoint,
             headers=headers,
             json=gradio_payload,
             timeout=60  # Gradio can take time
         )
+        
+        # If /api/predict fails, check if it's a queue error
+        if not response.ok:
+            error_text = response.text
+            logger.warning(f"API predict failed: {response.status_code} - {error_text[:200]}")
+            
+            # If queue error, try using the queue system properly
+            if "queue" in error_text.lower() or "join" in error_text.lower():
+                logger.info("Queue required, using /queue/join endpoint...")
+                try:
+                    # Step 1: Join the queue
+                    queue_join_payload = {
+                        "fn_index": 1,
+                        "session_hash": session_id,
+                        "event_data": None
+                    }
+                    
+                    queue_join_response = requests.post(
+                        f"{PENNY_SPACE_URL}/queue/join",
+                        headers=headers,
+                        json=queue_join_payload,
+                        timeout=30
+                    )
+                    
+                    if queue_join_response.ok:
+                        queue_data = queue_join_response.json()
+                        queue_hash = queue_data.get("hash") or queue_data.get("queue_hash")
+                        
+                        if queue_hash:
+                            # Step 2: Push data to queue
+                            queue_push_payload = {
+                                "fn_index": 1,
+                                "data": [message, city, history],
+                                "session_hash": session_id,
+                                "event_data": None,
+                                "hash": queue_hash
+                            }
+                            
+                            push_response = requests.post(
+                                f"{PENNY_SPACE_URL}/queue/push",
+                                headers=headers,
+                                json=queue_push_payload,
+                                timeout=30
+                            )
+                            
+                            if push_response.ok:
+                                # Step 3: Poll for result
+                                max_polls = 30
+                                poll_count = 0
+                                
+                                while poll_count < max_polls:
+                                    time.sleep(1)  # Wait 1 second between polls
+                                    status_response = requests.post(
+                                        f"{PENNY_SPACE_URL}/queue/status",
+                                        headers=headers,
+                                        json={"hash": queue_hash},
+                                        timeout=10
+                                    )
+                                    
+                                    if status_response.ok:
+                                        status_data = status_response.json()
+                                        if status_data.get("status") == "COMPLETE":
+                                            # Get the result
+                                            result_data = status_data.get("data", [])
+                                            if result_data:
+                                                # Create a mock response object
+                                                class MockResponse:
+                                                    def __init__(self, data):
+                                                        self.ok = True
+                                                        self.status_code = 200
+                                                        self._data = data
+                                                    
+                                                    def json(self):
+                                                        return {"data": self._data}
+                                                
+                                                response = MockResponse(result_data)
+                                                logger.info("Successfully got result from queue")
+                                                break
+                                    
+                                    poll_count += 1
+                                
+                                if poll_count >= max_polls:
+                                    logger.error("Queue polling timed out")
+                                    raise Exception("Queue polling timed out")
+                            else:
+                                logger.warning(f"Queue push failed: {push_response.status_code}")
+                        else:
+                            logger.warning("No queue hash returned")
+                    else:
+                        logger.warning(f"Queue join failed: {queue_join_response.status_code}")
+                except Exception as queue_error:
+                    logger.error(f"Queue system error: {str(queue_error)}")
+                    # Fall through to try /run/predict as last resort
+            
+            # Last resort: try /run/predict (older Gradio versions)
+            if not response.ok:
+                logger.info("Trying /run/predict as fallback...")
+                predict_endpoint = f"{PENNY_SPACE_URL}/run/predict"
+                response = requests.post(
+                    predict_endpoint,
+                    headers=headers,
+                    json=gradio_payload,
+                    timeout=60
+                )
         
         if not response.ok:
             error_text = response.text

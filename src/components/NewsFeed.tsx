@@ -43,25 +43,26 @@ export const NewsFeed = () => {
         },
       });
       
-      if (response.ok) {
-        const data = await response.json();
-        // Handle both direct array and wrapped response
-        const articlesData = data.articles || data;
-        setArticles(Array.isArray(articlesData) ? articlesData : []);
-        setLastUpdated(new Date());
-      } else {
-        // If API returns 404, the function might not be deployed
-        if (response.status === 404) {
-          console.warn('News API endpoint not found (404). Azure Function may not be deployed.');
-          setError('News service is temporarily unavailable');
-          setArticles([]); // Set empty array instead of throwing
+        if (response.ok) {
+          const data = await response.json();
+          // Handle both direct array and wrapped response
+          const articlesData = data.articles || data;
+          setArticles(Array.isArray(articlesData) ? articlesData : []);
           setLastUpdated(new Date());
-          return;
+          setError(null); // Clear any previous errors
+        } else {
+          // If API returns 404, use fallback mock data
+          if (response.status === 404) {
+            console.warn('News API endpoint not found (404). Using fallback data.');
+            // Don't set error - just use mock data silently
+            setError(null);
+          } else {
+            // For other errors, try to get error message
+            const errorData = await response.json().catch(() => ({}));
+            setError(errorData.error || `API returned ${response.status}`);
+          }
+          // Always fall through to mock data
         }
-        // If API returns error, try to get error message
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `API returned ${response.status}`);
-      }
     } catch (err: any) {
       console.error('Error fetching news:', err);
       // Don't show error if it's just a 404 (function not deployed)
