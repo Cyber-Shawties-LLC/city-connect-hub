@@ -36,7 +36,8 @@ export const NewsFeed = () => {
       
       // Fetch from Azure Function API (uses NEWS_API_KEY from Azure environment)
       const apiUrl = '/api/news';
-      const response = await fetch(`${apiUrl}?city=${city}&limit=10`, {
+      const cityParam = encodeURIComponent(city); // Ensure city name is properly encoded
+      const response = await fetch(`${apiUrl}?city=${cityParam}&limit=10`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -84,15 +85,15 @@ export const NewsFeed = () => {
           source: "Community Bulletin"
         },
         {
-          title: "New Bike Lanes Installed on Main Street",
-          description: "The city has completed installation of protected bike lanes on Main Street, improving safety for cyclists and pedestrians.",
+          title: `${city} Installs New Bike Lanes on Main Street`,
+          description: `The city of ${city} has completed installation of protected bike lanes on Main Street, improving safety for cyclists and pedestrians.`,
           url: "#",
           publishedAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
           source: `${city} Transportation`
         },
         {
-          title: "Farmers Market Returns This Saturday",
-          description: "The weekly farmers market returns to the downtown plaza this Saturday with over 30 local vendors offering fresh produce and handmade goods.",
+          title: `${city} Farmers Market Returns This Saturday`,
+          description: `The weekly ${city} farmers market returns to the downtown plaza this Saturday with over 30 local vendors offering fresh produce and handmade goods.`,
           url: "#",
           publishedAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
           source: `${city} Events`
