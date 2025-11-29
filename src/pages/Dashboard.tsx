@@ -8,12 +8,15 @@ import { ChatBox } from '@/components/ChatBox';
 import { ChatHistory } from '@/components/ChatHistory';
 import { NewsFeed } from '@/components/NewsFeed';
 import { LiveNewsCard } from '@/components/LiveNewsCard';
+import { LocationSelector } from '@/components/LocationSelector';
 import { PennyChatProvider } from '@/hooks/usePennyChats';
+import { LocationProvider, useLocation } from '@/hooks/useLocation';
 import { useNavigate } from 'react-router-dom';
 
-const Dashboard = () => {
+const DashboardContent = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { selectedMarket } = useLocation();
 
   const currentDate = new Date().toLocaleDateString('en-US', {
     weekday: 'short',
@@ -56,8 +59,15 @@ const Dashboard = () => {
         {/* Main Content */}
         <main className="container mx-auto px-4 py-8">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2 text-foreground">Welcome, {user?.name}!</h1>
-            <p className="text-muted-foreground">Stay connected with your community</p>
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h1 className="text-3xl font-bold mb-2 text-foreground">Welcome, {user?.name}!</h1>
+                <p className="text-muted-foreground">Stay connected with your community</p>
+              </div>
+              <div className="w-64">
+                <LocationSelector />
+              </div>
+            </div>
           </div>
 
           {/* Dashboard Grid */}
@@ -72,7 +82,9 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  <p className="text-2xl font-bold text-foreground">New York, NY</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {selectedMarket?.displayName || 'Select Location'}
+                  </p>
                   <p className="text-lg text-foreground">72°F, Partly Cloudy</p>
                   <p className="text-sm text-muted-foreground">Perfect day for outdoor events</p>
                 </div>
@@ -144,6 +156,14 @@ const Dashboard = () => {
       </div>
     </div>
     </PennyChatProvider>
+  );
+};
+
+const Dashboard = () => {
+  return (
+    <LocationProvider>
+      <DashboardContent />
+    </LocationProvider>
   );
 };
 

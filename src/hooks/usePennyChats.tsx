@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { talkToPenny, PennyPayload, PennyResponse } from "../lib/api";
+import { useLocation } from "./useLocation";
 
 export interface PennyMessage {
   id: string;
@@ -30,6 +31,7 @@ interface PennyChatContextType {
 const PennyChatContext = createContext<PennyChatContextType | undefined>(undefined);
 
 export const PennyChatProvider = ({ children }: { children: ReactNode }) => {
+  const { selectedMarket, getLocationString } = useLocation();
   const [conversations, setConversations] = useState<PennyConversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -174,7 +176,7 @@ export const PennyChatProvider = ({ children }: { children: ReactNode }) => {
       // Build payload matching Penny's Gradio API format
       const payload: PennyPayload = {
         message: input,
-        city: "Norfolk, VA", // Default city, can be made configurable
+        city: getLocationString(), // Use selected market location
         history: history,
         ...(extra || {}),
       };

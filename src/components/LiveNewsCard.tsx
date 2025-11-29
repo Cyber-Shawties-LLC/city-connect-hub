@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Newspaper, Radio } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useLocation } from '@/hooks/useLocation';
 
 interface NewsItem {
   title: string;
@@ -10,14 +11,16 @@ interface NewsItem {
 }
 
 export const LiveNewsCard = () => {
+  const { selectedMarket } = useLocation();
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchLiveNews = async () => {
       try {
+        const city = selectedMarket?.name || 'Norfolk';
         // Fetch from Azure Function API
-        const response = await fetch('/api/news?city=Norfolk&limit=3');
+        const response = await fetch(`/api/news?city=${city}&limit=3`);
         
         if (response.ok) {
           const data = await response.json();
@@ -54,7 +57,7 @@ export const LiveNewsCard = () => {
     // Refresh every 15 minutes
     const interval = setInterval(fetchLiveNews, 15 * 60 * 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [selectedMarket?.id, selectedMarket?.name]); // Refetch when location changes
 
   const formatTimeAgo = (dateString: string) => {
     if (!dateString) return 'Recently';
@@ -72,7 +75,14 @@ export const LiveNewsCard = () => {
       <CardHeader>
         <CardTitle className="flex items-center space-x-2">
           <Radio className="h-5 w-5 text-primary" />
-          <span>Live News</span>
+          <span>
+            Live News
+            {selectedMarket && (
+              <span className="text-sm font-normal text-muted-foreground ml-2">
+                - {selectedMarket.displayName}
+              </span>
+            )}
+          </span>
         </CardTitle>
       </CardHeader>
       <CardContent>

@@ -48,7 +48,7 @@ export async function talkToPenny(
         fn_index: 1, // chat_with_penny_sync function index
         data: [
           payload.message,
-          payload.city || "Norfolk, VA",
+          payload.city || "Norfolk, VA", // Fallback if not provided
           payload.history || []
         ],
         session_hash: sessionHash,
