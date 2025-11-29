@@ -1,0 +1,6 @@
+azure-core>=1.29.0
+azure-search-documents>=11.4.0
+azure-storage-blob>=12.19.0
+requests>=2.31.0
+python-dotenv>=1.0.0
+huggingface-hub>=0.20.0
