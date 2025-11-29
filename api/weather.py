@@ -208,10 +208,15 @@ def main(req):
         
         # If no API keys or all failed, return mock data with error info
         if not weather_data:
-            logger.warning(f"No weather data available for {city}, {state}. Returning mock data.")
+            logger.error(f"CRITICAL: No weather data available for {city}, {state}. All APIs failed or not configured.")
+            logger.error(f"Azure Maps Key present: {bool(azure_maps_key)}")
+            logger.error(f"OpenWeather Key present: {bool(openweather_api_key)}")
+            logger.error(f"WeatherAPI Key present: {bool(weatherapi_key)}")
+            logger.error(f"Coordinates provided: lat={lat}, lon={lon}")
             weather_data = get_mock_weather(city, state)
             # Add a flag to indicate this is mock data
             weather_data["_is_mock"] = True
+            weather_data["_error"] = "All weather APIs failed or not configured. Using mock data."
         
         return {
             "statusCode": 200,

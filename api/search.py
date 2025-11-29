@@ -18,6 +18,10 @@ def main(req):
         if not term or term == "*":
             term = body_data.get("q") or body_data.get("query") or "*"
         
+        # Get city and state for filtering (optional)
+        city = req.params.get("city") or body_data.get("city")
+        state = req.params.get("state") or body_data.get("state")
+        
         # Get index type from query params or body (defaults to "events")
         index_type = req.params.get("index_type") or body_data.get("index_type") or "events"
         
@@ -59,11 +63,23 @@ def main(req):
             "api-key": key
         }
         
+        # Build search query - if city/state provided, add filter
         search_body = { "search": term }
+        
+        # Add city/state filter if provided
+        if city or state:
+            filters = []
+            if city:
+                filters.append(f"city eq '{city}'")
+            if state:
+                filters.append(f"state eq '{state}'")
+            if filters:
+                search_body["filter"] = " and ".join(filters)
+                logger.info(f"Adding filter: {search_body['filter']}")
         
         url = f"{endpoint}/indexes/{index}/docs/search?api-version=2023-07-01-Preview"
         
-        logger.info(f"Searching index: {index} with term: {term}")
+        logger.info(f"Searching index: {index} with term: {term}, city: {city}, state: {state}")
         
         response = requests.post(url, headers=headers, json=search_body, timeout=30)
         response.raise_for_status()
