@@ -32,43 +32,93 @@ export async function talkToPenny(
   payload: PennyPayload
 ): Promise<PennyResponse> {
   try {
-    // The error shows FastAPI expects a dictionary, but Gradio passes arrays
-    // We need to use /run/predict which is the Gradio API endpoint
-    // The backend error suggests the FastAPI endpoint is receiving the wrong format
-    // Let's use the Gradio /run/predict endpoint with proper queue handling
-    const sessionHash = payload.session_id || `session_${Date.now()}`;
-    const predictEndpoint = `${BACKEND_URL}/run/predict`;
+    // Gradio API endpoint - try /api/predict first (newer Gradio versions)
+    // Fallback to /run/predict if needed
+    const sessionHash = payload.session_id || `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    const res = await fetch(predictEndpoint, {
+    // Try /api/predict first (Gradio 4.x+)
+    let predictEndpoint = `${BACKEND_URL}/api/predict`;
+    let fnIndex = 0; // Start with 0, as it's often the first function
+    
+    // Prepare the data array - Gradio expects inputs in order
+    const dataArray = [
+      payload.message || "",
+      payload.city || "Norfolk, VA",
+      payload.history || []
+    ];
+    
+    const requestBody = {
+      data: dataArray,
+      event_data: null,
+      fn_index: fnIndex,
+      session_hash: sessionHash,
+      trigger_id: Math.floor(Math.random() * 1000000000)
+    };
+    
+    console.log("Calling Penny API:", {
+      endpoint: predictEndpoint,
+      fn_index: fnIndex,
+      data: dataArray
+    });
+    
+    let res = await fetch(predictEndpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        fn_index: 1, // chat_with_penny_sync function index
-        data: [
-          payload.message,
-          payload.city || "Norfolk, VA", // Fallback if not provided
-          payload.history || []
-        ],
-        session_hash: sessionHash,
-        event_data: null
-      }),
+      body: JSON.stringify(requestBody),
     });
+
+    // If /api/predict fails, try /run/predict (older Gradio versions)
+    if (!res.ok && res.status === 404) {
+      console.log("Trying /run/predict endpoint instead...");
+      predictEndpoint = `${BACKEND_URL}/run/predict`;
+      res = await fetch(predictEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
+    }
 
     if (!res.ok) {
       const errorText = await res.text().catch(() => 'No error details');
-      throw new Error(`API Error: ${res.status} ${res.statusText} - ${errorText}`);
+      console.error("Penny API error response:", {
+        status: res.status,
+        statusText: res.statusText,
+        errorText: errorText.substring(0, 500)
+      });
+      throw new Error(`API Error: ${res.status} ${res.statusText} - ${errorText.substring(0, 200)}`);
     }
 
     const result = await res.json();
+    console.log("Penny API response:", result);
     
     // Gradio returns { data: [chatbot_history, cleared_message] }
     // chatbot_history is array of [user_msg, bot_msg] tuples
     const responseData = result.data || result;
-    const history = Array.isArray(responseData) && responseData[0] ? responseData[0] : [];
-    const lastMessage = history.length > 0 ? history[history.length - 1] : null;
-    const botReply = lastMessage?.[1] || "I'm sorry, I didn't get a response.";
+    
+    // Handle different response formats
+    let history: Array<[string | null, string | null]> = [];
+    let botReply = "I'm sorry, I didn't get a response.";
+    
+    if (Array.isArray(responseData)) {
+      // Standard format: [chatbot_history, cleared_message]
+      if (responseData[0] && Array.isArray(responseData[0])) {
+        history = responseData[0];
+        const lastMessage = history.length > 0 ? history[history.length - 1] : null;
+        botReply = lastMessage?.[1] || responseData[1] || botReply;
+      } else if (responseData[0] && typeof responseData[0] === 'string') {
+        // Sometimes it's just the message string
+        botReply = responseData[0];
+      }
+    } else if (typeof responseData === 'string') {
+      botReply = responseData;
+    } else if (result.response) {
+      // Fallback to result.response if available
+      botReply = result.response;
+    }
     
     return {
       data: responseData,
@@ -79,6 +129,7 @@ export async function talkToPenny(
     // Enhanced error logging
     console.error("Penny API call failed:", {
       endpoint: CHAT_ENDPOINT,
+      backendUrl: BACKEND_URL,
       payload,
       error: error.message,
       stack: error.stack

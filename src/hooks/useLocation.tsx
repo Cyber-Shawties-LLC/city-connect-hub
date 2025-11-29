@@ -131,11 +131,8 @@ export const LocationProvider = ({ children }: { children: ReactNode }) => {
       // Default to Norfolk if nothing is saved
       setSelectedMarketState(MARKET_AREAS[0]);
     }
-    
-    // Auto-detect location on mount to confirm/update market selection
-    detectLocation();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run once on mount
+    // Don't auto-detect on mount - let user explicitly request it
+  }, []);
 
   // Save to localStorage when selected market changes
   useEffect(() => {
