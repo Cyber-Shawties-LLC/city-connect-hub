@@ -47,37 +47,30 @@ export const NewsFeed = () => {
           const data = await response.json();
           // Handle both direct array and wrapped response
           const articlesData = data.articles || data;
-          setArticles(Array.isArray(articlesData) ? articlesData : []);
-          setLastUpdated(new Date());
-          setError(null); // Clear any previous errors
-        } else {
-          // If API returns 404, use fallback mock data
-          if (response.status === 404) {
-            console.warn('News API endpoint not found (404). Using fallback data.');
-            // Don't set error - just use mock data silently
+          if (Array.isArray(articlesData) && articlesData.length > 0) {
+            setArticles(articlesData);
+            setLastUpdated(new Date());
             setError(null);
           } else {
-            // For other errors, try to get error message
-            const errorData = await response.json().catch(() => ({}));
-            setError(errorData.error || `API returned ${response.status}`);
+            // API returned empty array, use mock data
+            throw new Error('No articles returned from API');
           }
-          // Always fall through to mock data
+        } else {
+          // API returned error, use mock data
+          if (response.status === 404) {
+            console.warn('News API endpoint not found (404). Using fallback data.');
+          } else {
+            console.warn(`News API returned ${response.status}. Using fallback data.`);
+          }
+          throw new Error(`API returned ${response.status}`);
         }
     } catch (err: any) {
       console.error('Error fetching news:', err);
-      // Don't show error if it's just a 404 (function not deployed)
-      if (!err.message?.includes('404')) {
-        setError(err.message || 'Failed to load news');
-      } else {
-        setError(null); // Clear error for 404s
-        setArticles([]);
-      }
-      
-      // Fallback to mock data on error (so users still see something)
+      // Always use mock data as fallback (so users always see something)
       const city = selectedMarket?.name || 'Norfolk';
       const mockArticles: NewsArticle[] = [
         {
-          title: "City Council Approves New Community Center Funding",
+          title: `${city} City Council Approves New Community Center Funding`,
           description: `The ${city} City Council voted unanimously to approve $2.5 million in funding for a new community center in the downtown area.`,
           url: "#",
           publishedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
@@ -105,7 +98,7 @@ export const NewsFeed = () => {
           source: `${city} Events`
         },
         {
-          title: "City Announces New Recycling Program",
+          title: `${city} Announces New Recycling Program`,
           description: `Starting next month, ${city} will expand its recycling program to include more materials and offer curbside pickup for all residents.`,
           url: "#",
           publishedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
@@ -114,6 +107,7 @@ export const NewsFeed = () => {
       ];
       setArticles(mockArticles);
       setLastUpdated(new Date());
+      setError(null); // Don't show error - we have fallback data
     } finally {
       setLoading(false);
     }

@@ -32,12 +32,25 @@ export async function talkToPenny(
   payload: PennyPayload
 ): Promise<PennyResponse> {
   try {
-    // Use Azure Function endpoint first (recommended for production)
-    // This proxies to Hugging Face and handles authentication
-    const azureEndpoint = `${API_URL}/agent`;
+    // Call Hugging Face Space directly (no Azure Function)
+    const sessionHash = payload.session_id || `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    console.log("Calling Penny API via Azure Function:", {
-      endpoint: azureEndpoint,
+    // Prepare Gradio API request format
+    const dataArray = [
+      payload.message || "",
+      payload.city || "Norfolk, VA",
+      payload.history || []
+    ];
+    
+    const requestBody = {
+      data: dataArray,
+      event_data: null,
+      fn_index: 1, // Try fn_index 1 first (most common for chat functions)
+      session_hash: sessionHash
+    };
+    
+    console.log("Calling Penny directly via Hugging Face Space:", {
+      endpoint: `${BACKEND_URL}/run/predict`,
       payload: {
         message: payload.message,
         city: payload.city,
@@ -45,46 +58,20 @@ export async function talkToPenny(
       }
     });
     
-    // Try Azure Function endpoint first
-    let res = await fetch(azureEndpoint, {
+    // Try /run/predict endpoint (Gradio's standard API endpoint)
+    let predictEndpoint = `${BACKEND_URL}/run/predict`;
+    let res = await fetch(predictEndpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        message: payload.message,
-        city: payload.city || "Norfolk, VA",
-        history: payload.history || [],
-        session_id: payload.session_id || `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        latitude: payload.latitude || payload.lat || null,
-        longitude: payload.longitude || payload.lon || null,
-        location_error: payload.location_error || null,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
-    // If Azure Function fails (404 or 500), fallback to direct Hugging Face Space
+    // If /run/predict fails, try /api/predict (Gradio 4.x+)
     if (!res.ok && (res.status === 404 || res.status === 500)) {
-      console.warn("Azure Function endpoint failed, trying direct Hugging Face Space...");
-      
-      const sessionHash = payload.session_id || `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
-      // Try /api/predict first (Gradio 4.x+)
-      let predictEndpoint = `${BACKEND_URL}/api/predict`;
-      let fnIndex = 1;
-      
-      const dataArray = [
-        payload.message || "",
-        payload.city || "Norfolk, VA",
-        payload.history || []
-      ];
-      
-      const requestBody = {
-        data: dataArray,
-        event_data: null,
-        fn_index: fnIndex,
-        session_hash: sessionHash
-      };
-      
+      console.log("Trying /api/predict endpoint...");
+      predictEndpoint = `${BACKEND_URL}/api/predict`;
       res = await fetch(predictEndpoint, {
         method: "POST",
         headers: {
@@ -92,33 +79,19 @@ export async function talkToPenny(
         },
         body: JSON.stringify(requestBody),
       });
-
-      // If /api/predict fails, try /run/predict (older Gradio versions)
-      if (!res.ok && (res.status === 404 || res.status === 500)) {
-        console.log("Trying /run/predict endpoint with fn_index 1...");
-        predictEndpoint = `${BACKEND_URL}/run/predict`;
-        requestBody.fn_index = 1;
-        res = await fetch(predictEndpoint, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(requestBody),
-        });
-      }
-      
-      // If still failing, try fn_index 0
-      if (!res.ok && res.status === 500) {
-        console.log("Trying fn_index 0...");
-        requestBody.fn_index = 0;
-        res = await fetch(predictEndpoint, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(requestBody),
-        });
-      }
+    }
+    
+    // If still failing, try fn_index 0
+    if (!res.ok && res.status === 500) {
+      console.log("Trying fn_index 0...");
+      requestBody.fn_index = 0;
+      res = await fetch(predictEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
     }
 
     if (!res.ok) {
@@ -134,17 +107,7 @@ export async function talkToPenny(
     const result = await res.json();
     console.log("Penny API response:", result);
     
-    // Handle Azure Function response format (wraps Gradio response)
-    // Azure Function returns: { data: [...], response: "...", history: [...] }
-    if (result.response) {
-      return {
-        data: result.data || [[], ""],
-        response: result.response,
-        history: result.history || []
-      };
-    }
-    
-    // Handle direct Gradio response format
+    // Handle Gradio response format
     // Gradio returns { data: [chatbot_history, cleared_message] }
     // chatbot_history is array of [user_msg, bot_msg] tuples
     const responseData = result.data || result;
